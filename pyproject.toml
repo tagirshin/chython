@@ -1,6 +1,6 @@
 [tool.poetry]
 name = 'chython'
-version = '2.3'
+version = '1.90'
 description = 'Library for processing molecules and reactions in python way'
 authors = ['Ramil Nugmanov <nougmanoff@protonmail.com>']
 license = 'LGPLv3'
@@ -30,17 +30,16 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.12"
+python = ">=3.10,<4"
 cachedmethods = '>=0.1.4'
 lazy-object-proxy = '>=1.6'
 lxml = '>=4.1'
-py-mini-racer = '>=0.6.0'
-chytorch-rxnmap = {version = '>=1.4', optional = true}
+chytorch-rxnmap = {git = "https://github.com/chython/chytorch-rxnmap.git", rev = "chython"}
+chytorch = {git = "https://github.com/tagirshin/chytorch.git", rev = "cross-platform"}
 rdkit = {version = '>=2023.9', optional = true}
-numpy = ">=1.21.0"
+mini-racer = "^0.12.4"
 
 [tool.poetry.extras]
-mapping = ['chytorch-rxnmap']
 rdkit = ['rdkit']
 
 [tool.poetry.group.dev]
