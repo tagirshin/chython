@@ -15,7 +15,6 @@ classifiers = [
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
   "Topic :: Scientific/Engineering",
   "Topic :: Scientific/Engineering :: Chemistry",
   "Topic :: Scientific/Engineering :: Information Analysis",
@@ -38,6 +37,9 @@ documentation = "https://chython.readthedocs.io"
 rdkit = ["rdkit>=2023.9"]
 
 [tool.poetry]
+packages = [
+    { include = "chython" }
+]
 include = [
   "chython/*/*.pyd",
   "chython/*/*.so",
