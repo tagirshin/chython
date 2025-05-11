@@ -43,27 +43,29 @@ from .groupXVIII import *
 modules = {v.__name__: v for k, v in globals().items() if k.startswith('group') and k != 'groups'}
 elements = {k: v for k, v in globals().items() if isinstance(v, ABCMeta) and k != 'Element' and issubclass(v, Element)}
 
-__all__ = ['Element', 'DynamicElement', 'QueryElement', 'AnyElement', 'ListElement', 'AnyMetal']
+
+__all__ = ['Element', 'DynamicElement', 'QueryElement', 'AnyElement', 'ListElement', 'AnyMetal', 'DynamicQueryElement', 'DynamicAnyElement']
 __all__.extend(k for k in globals() if k.startswith('Group'))
 __all__.extend(k for k in globals() if k.startswith('Period'))
 __all__.extend(elements)
 
 
-for k, v in elements.items():
-    name = f'Dynamic{k}'
-    globals()[name] = cls = type(name, (DynamicElement,),
-                                 {'__module__': v.__module__, '__slots__': (),
-                                  'atomic_number': v.atomic_number})
-    setattr(modules[v.__module__], name, cls)
-    modules[v.__module__].__all__.append(name)
-    __all__.append(name)
-
-for k, v in elements.items():
-    name = f'Query{k}'
-    globals()[name] = cls = type(name, (QueryElement,),
-                                 {'__module__': v.__module__, '__slots__': (),
-                                  'atomic_number': v.atomic_number,
-                                  'mdl_isotope': v.mdl_isotope})
-    setattr(modules[v.__module__], name, cls)
-    modules[v.__module__].__all__.append(name)
-    __all__.append(name)
+# Removed dynamic class generation loops for Dynamic<Element> and Query<Element>
+# for k, v in elements.items():
+#     name = f'Dynamic{k}'
+#     globals()[name] = cls = type(name, (DynamicElement,),
+#                                  {'__module__': v.__module__, '__slots__': (),
+#                                   'atomic_number': v.atomic_number})
+#     setattr(modules[v.__module__], name, cls)
+#     modules[v.__module__].__all__.append(name)
+#     __all__.append(name)
+#
+# for k, v in elements.items():
+#     name = f'Query{k}'
+#     globals()[name] = cls = type(name, (QueryElement,),
+#                                  {'__module__': v.__module__, '__slots__': (),
+#                                   'atomic_number': v.atomic_number,
+#                                   'mdl_isotope': v.mdl_isotope})
+#     setattr(modules[v.__module__], name, cls)
+#     modules[v.__module__].__all__.append(name)
+#     __all__.append(name)

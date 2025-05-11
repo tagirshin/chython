@@ -78,7 +78,8 @@ class Element(ABC):
     @isotope.setter
     def isotope(self, value: Optional[int]):
         if isinstance(value, int):
-            if value not in self.isotopes_distribution:
+            # Allow isotope = 0 as a special case (e.g., for default or unspecified isotope)
+            if value != 0 and value not in self.isotopes_distribution:
                 raise ValueError(f'isotope number {value} impossible or not stable for {self.atomic_symbol}')
         elif value is not None:
             raise TypeError('integer isotope number required')
