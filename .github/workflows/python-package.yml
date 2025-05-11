@@ -17,25 +17,22 @@ jobs:
           - name: "Windows AMD64"
             os_runner: windows-latest
             python_host_arch: x64
-            # setup_env: {} # No longer needed here if set in script
             build_type: direct
 
           - name: "Windows x86"
             os_runner: windows-latest
             python_host_arch: x86
-            # setup_env: {} # No longer needed here if set in script
             build_type: direct
 
           - name: "macOS ARM64 (macOS 11+)"
-            os_runner: macos-14 # Assumes macos-14 is an ARM-based runner
-            python_host_arch: 'default' # Let setup-python pick runner arch
-            macos_deployment_target: "11.0" # Store directly for script access
+            os_runner: macos-14
+            python_host_arch: 'arm64'
+            macos_deployment_target: "11.0"
             build_type: direct
 
           - name: "Linux manylinux2014 x86_64"
             os_runner: ubuntu-latest
-            python_host_arch: x64 # For host tools like twine
-            # setup_env: {} # No longer needed here if set in script
+            python_host_arch: x64
             build_type: manylinux
             manylinux_image: "quay.io/pypa/manylinux2014_x86_64"
 
