@@ -7,23 +7,81 @@ on:
 
 jobs:
   binary:
-    runs-on: ${{ matrix.os }}
+    name: Build wheel for ${{ matrix.build_target.name }} (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.build_target.os_runner }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
         python-version: ["3.10", "3.11", "3.12"]
+        build_target:
+          - name: "Windows AMD64"
+            os_runner: windows-latest
+            python_host_arch: x64
+            # setup_env: {} # No longer needed here if set in script
+            build_type: direct
+
+          - name: "Windows x86"
+            os_runner: windows-latest
+            python_host_arch: x86
+            # setup_env: {} # No longer needed here if set in script
+            build_type: direct
+
+          - name: "macOS ARM64 (macOS 11+)"
+            os_runner: macos-14 # Assumes macos-14 is an ARM-based runner
+            python_host_arch: 'default' # Let setup-python pick runner arch
+            macos_deployment_target: "11.0" # Store directly for script access
+            build_type: direct
+
+          - name: "Linux manylinux2014 x86_64"
+            os_runner: ubuntu-latest
+            python_host_arch: x64 # For host tools like twine
+            # setup_env: {} # No longer needed here if set in script
+            build_type: manylinux
+            manylinux_image: "quay.io/pypa/manylinux2014_x86_64"
+
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }} on runner
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+        architecture: ${{ matrix.build_target.python_host_arch }}
+
+    - name: Install host dependencies (Twine for all, Poetry for direct builds)
+      shell: bash
       run: |
-        python -m pip install --upgrade pip poetry twine
-    - name: Build wheel
+        python -m pip install --upgrade pip twine
+        if [ "${{ matrix.build_target.build_type }}" == "direct" ]; then
+          python -m pip install poetry
+        fi
+
+    - name: Build wheel (direct)
+      if: matrix.build_target.build_type == 'direct'
+      shell: bash
       run: |
+        # Conditionally set MACOSX_DEPLOYMENT_TARGET for macOS builds
+        if [ "${{ matrix.build_target.name }}" == "macOS ARM64 (macOS 11+)" ]; then
+          export MACOSX_DEPLOYMENT_TARGET="${{ matrix.build_target.macos_deployment_target }}"
+        fi
         poetry build -f wheel
-    - name: Publish package
+
+    - name: Build wheel (manylinux)
+      if: matrix.build_target.build_type == 'manylinux'
+      shell: bash
       run: |
-        twine upload -u __token__ -p ${{ secrets.PYPI_API_TOKEN }} --non-interactive --skip-existing dist/*
+        echo "Building manylinux wheel for Python ${{ matrix.python-version }} using ${{ matrix.build_target.manylinux_image }}"
+        chmod +x .github/workflows/build_manylinux.sh
+        docker run --rm \
+          -v "${{ github.workspace }}":/workdir \
+          "${{ matrix.build_target.manylinux_image }}" \
+          /workdir/.github/workflows/build_manylinux.sh "${{ matrix.python-version }}" "/workdir"
+
+    - name: Publish package
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      shell: bash
+      run: |
+        ls -R dist/
+        twine upload --non-interactive --skip-existing dist/*
