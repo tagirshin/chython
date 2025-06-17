@@ -92,8 +92,10 @@ class TestCGRContainer(unittest.TestCase):
                 self.assertEqual(sub.bond(n1_orig,n2_orig).order, bond_orig.order)
                 self.assertEqual(sub.bond(n1_orig,n2_orig).p_order, bond_orig.p_order)
             else: # If one atom is outside sub, bond should not be in sub
-                if sub.has_atom(n1_orig) or sub.has_atom(n2_orig):
-                    self.assertFalse(sub.has_bond(n1_orig, n2_orig) if sub.has_atom(n1_orig) and sub.has_atom(n2_orig) else True)
+                # This bond connects an atom in the substructure to one outside.
+                # It should NOT exist in the substructure itself.
+                if sub.has_atom(n1_orig) != sub.has_atom(n2_orig):
+                    self.assertFalse(sub.has_bond(n1_orig, n2_orig))
 
 
     def test_substructure_as_query(self):
