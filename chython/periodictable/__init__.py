@@ -59,13 +59,13 @@ __all__.extend(elements)
 #     setattr(modules[v.__module__], name, cls)
 #     modules[v.__module__].__all__.append(name)
 #     __all__.append(name)
-#
-# for k, v in elements.items():
-#     name = f'Query{k}'
-#     globals()[name] = cls = type(name, (QueryElement,),
-#                                  {'__module__': v.__module__, '__slots__': (),
-#                                   'atomic_number': v.atomic_number,
-#                                   'mdl_isotope': v.mdl_isotope})
-#     setattr(modules[v.__module__], name, cls)
-#     modules[v.__module__].__all__.append(name)
-#     __all__.append(name)
+
+for k, v in elements.items():
+    name = f'Query{k}'
+    globals()[name] = cls = type(name, (QueryElement,),
+                                 {'__module__': v.__module__, '__slots__': (),
+                                  'atomic_number': v.atomic_number,
+                                  'mdl_isotope': v.mdl_isotope})
+    setattr(modules[v.__module__], name, cls)
+    modules[v.__module__].__all__.append(name)
+    __all__.append(name)

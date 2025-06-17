@@ -77,7 +77,7 @@ def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: 
         radicals = []
         contract = None
 
-    if '>' in smi:
+    if '>' in smi and (smi[smi.find('>') + 1] in '>([' or smi[smi.find('>') + 1].isalpha()):
         record = {'reactants': [], 'reagents': [], 'products': [], 'log': log}
         try:
             reactants, reagents, products = smi.split('>')

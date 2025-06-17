@@ -188,12 +188,17 @@ class DynamicElement: # Removed ABC
     def charge(self) -> int:
         return self._charge
 
-    # Add setters if direct modification of charge/radical/p_charge/p_is_radical is needed
-    # For now, assuming these are set via from_atoms or by Graph methods for connected atoms.
+    @charge.setter
+    def charge(self, value: int):
+        self._charge = value
 
     @property
     def is_radical(self) -> bool:
         return self._is_radical
+
+    @is_radical.setter
+    def is_radical(self, value: bool):
+        self._is_radical = value
 
     @property
     def p_charge(self) -> int:

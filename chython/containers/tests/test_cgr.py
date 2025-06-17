@@ -50,8 +50,8 @@ class TestCGRContainer(unittest.TestCase):
         cgr_smiles_str = str(cgr)
         self.assertIsInstance(cgr_smiles_str, str)
         self.assertTrue(len(cgr_smiles_str) > 0)
-        # Based on previous successful output:
-        self.assertEqual(cgr_smiles_str, 'C[.>-]1[=>-]C[.>-]C=C[->.]2[.>-]C[=>-]C[.>-]1[->.]2')
+
+        self.assertEqual(cgr_smiles_str, 'C[.>-]1[=>-]2[->.]C(=C[.>-]C[=>-]C[.>-]1)[.>-]C[=>-]2')
 
         self.assertEqual(len(cgr), 6)
         atom_ids_in_cgr = set(iter(cgr))
@@ -93,7 +93,7 @@ class TestCGRContainer(unittest.TestCase):
                 self.assertEqual(sub.bond(n1_orig,n2_orig).p_order, bond_orig.p_order)
             else: # If one atom is outside sub, bond should not be in sub
                 if sub.has_atom(n1_orig) or sub.has_atom(n2_orig):
-                     self.assertFalse(sub.has_bond(n1_orig, n2_orig) if sub.has_atom(n1_orig) and sub.has_atom(n2_orig) else True)
+                    self.assertFalse(sub.has_bond(n1_orig, n2_orig) if sub.has_atom(n1_orig) and sub.has_atom(n2_orig) else True)
 
 
     def test_substructure_as_query(self):

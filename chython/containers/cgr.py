@@ -34,24 +34,56 @@ from ..algorithms.depict import DepictCGR
 from ..algorithms.x3dom import X3domCGR
 
 from ..periodictable import DynamicElement, Element, DynamicQueryElement
-from ..exceptions import MappingError
+from ..exceptions import MappingError, AtomNotFound, BondNotFound
 
 
-class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
-    __slots__ = ('_conformers', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane')
+class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
+    __slots__ = ('_atoms', '_bonds', '_conformers', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
     _atoms: Dict[int, DynamicElement]
     _bonds: Dict[int, Dict[int, DynamicBond]]
 
     def __init__(self):
+        self._atoms: Dict[int, DynamicElement] = {}
+        self._bonds: Dict[int, Dict[int, DynamicBond]] = {}
         self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
         self._p_charges: Dict[int, int] = {}
         self._p_radicals: Dict[int, bool] = {}
         self._hybridizations: Dict[int, int] = {}
         self._p_hybridizations: Dict[int, int] = {}
         self._plane: Dict[int, Tuple[float, float]] = {}
-        super().__init__()
+        self.flush_cache()
 
-    # Methods for charge and radical validation (can be expanded later)
+    # Methods from Graph
+    def flush_cache(self):
+        self.__dict__.clear()
+
+    def atom(self, n: int) -> DynamicElement:
+        return self._atoms[n]
+
+    def has_atom(self, n: int) -> bool:
+        return n in self._atoms
+
+    @property
+    def atoms_count(self) -> int:
+        return len(self._atoms)
+
+    @property
+    def atoms_numbers(self) -> Iterator[int]:
+        return iter(self._atoms)
+
+    def bond(self, n: int, m: int) -> DynamicBond:
+        try:
+            return self._bonds[n][m]
+        except KeyError as e:
+            raise BondNotFound from e
+
+    def has_bond(self, n: int, m: int) -> bool:
+        try:
+            # check if atom exists and has a bonds dict
+            return m in self._bonds[n]
+        except KeyError:
+            return False # If atom n doesn't exist, it has no bonds.
+
     def _validate_charge(self, charge: int) -> int:
         # Placeholder: Add actual validation logic if needed
         # For now, just ensure it's an int.
@@ -93,34 +125,50 @@ class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan
                 p += 1
         return s, p
 
-    def add_atom(self, atom: Union[DynamicElement, Element, int, str], *args, p_charge: int = 0,
-                 p_is_radical: bool = False, **kwargs):
-        p_charge = self._validate_charge(p_charge)
-        p_is_radical = self._validate_radical(p_is_radical)
+    def add_atom(self, atom: Union[DynamicElement, Element, int, str], n: Optional[int] = None, **kwargs):
+        p_charge = self._validate_charge(kwargs.pop('p_charge', 0))
+        p_is_radical = self._validate_radical(kwargs.pop('p_is_radical', False))
+        xy_coord = kwargs.pop('xy', None)
 
         if not isinstance(atom, DynamicElement):
             if isinstance(atom, Element):
-                atom = DynamicElement.from_atomic_number(atomic_number=atom.atomic_number, isotope=atom.isotope)
+                atom = DynamicElement.from_atomic_number(atomic_number=atom.atomic_number, isotope=atom.isotope, **kwargs)
             elif isinstance(atom, str):
-                atom = DynamicElement.from_symbol(symbol=atom, isotope=None)
+                atom = DynamicElement.from_symbol(symbol=atom, isotope=None, **kwargs)
             elif isinstance(atom, int):
-                atom = DynamicElement.from_atomic_number(atomic_number=atom, isotope=None)
+                atom = DynamicElement.from_atomic_number(atomic_number=atom, isotope=None, **kwargs)
             else:
                 raise TypeError('DynamicElement object expected')
 
-        xy_coord = kwargs.pop('xy', None)
-        _map = super().add_atom(atom, *args, **kwargs)
+        if n is None:
+            n = max(self._atoms, default=0) + 1
+        elif not isinstance(n, int):
+            raise TypeError('mapping should be integer')
+        elif n in self._atoms:
+            raise MappingError(f'atom with number {{{n}}} already exists')
+
+        self._atoms[n] = atom
+        self._bonds[n] = {}
+
         if xy_coord is not None:
-            self._plane[_map] = xy_coord
-        
-        self._p_charges[_map] = p_charge
-        self._p_radicals[_map] = p_is_radical
-        self._hybridizations[_map] = 1
-        self._p_hybridizations[_map] = 1
+            self._plane[n] = xy_coord
+
+        self._p_charges[n] = p_charge
+        self._p_radicals[n] = p_is_radical
+        self._hybridizations[n] = 1
+        self._p_hybridizations[n] = 1
         self._conformers.clear()
-        return _map
+        self.flush_cache()
+        return n
 
     def add_bond(self, n, m, bond: Union[DynamicBond, Bond, int]):
+        if n == m:
+            raise MappingError('atom loops impossible')
+        if n not in self._bonds or m not in self._bonds:
+            raise AtomNotFound('atoms not found')
+        if m in self._bonds[n]:
+            raise MappingError('atoms already bonded')
+
         if isinstance(bond, DynamicBond):
             order = bond.order
             p_order = bond.p_order
@@ -131,262 +179,178 @@ class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan
             order = p_order = bond
             bond = DynamicBond(order, order)
 
-        super().add_bond(n, m, bond)
+        self._bonds[n][m] = self._bonds[m][n] = bond
         self._conformers.clear()
 
         if order != 1 or p_order != 1:
             self._calc_hybridization(n)
             self._calc_hybridization(m)
+        self.flush_cache()
 
     def delete_atom(self, n):
-        old_bonds = self._bonds[n]
-        super().delete_atom(n)
+        if n not in self._atoms:
+            raise AtomNotFound(f"Atom {n} not found for deletion")
 
-        del self._p_charges[n]
-        del self._p_radicals[n]
-        del self._hybridizations[n]
-        del self._p_hybridizations[n]
+        old_bonds_neighbors = list(self._bonds.get(n, {}).keys())
+        for m in old_bonds_neighbors:
+            del self._bonds[m][n]
 
-        for m in old_bonds:
+        if n in self._bonds:
+            del self._bonds[n]
+        del self._atoms[n]
+
+        if n in self._p_charges: del self._p_charges[n]
+        if n in self._p_radicals: del self._p_radicals[n]
+        if n in self._hybridizations: del self._hybridizations[n]
+        if n in self._p_hybridizations: del self._p_hybridizations[n]
+        if n in self._plane: del self._plane[n]
+
+        for m in old_bonds_neighbors:
             self._calc_hybridization(m)
         self._conformers.clear()
+        self.flush_cache()
 
     def delete_bond(self, n, m):
-        super().delete_bond(n, m)
+        if n not in self._bonds or m not in self._bonds.get(n, {}):
+            raise BondNotFound(f"Bond between {n} and {m} not found for deletion")
+
+        del self._bonds[n][m]
+        del self._bonds[m][n]
         self._conformers.clear()
         self._calc_hybridization(n)
         self._calc_hybridization(m)
+        self.flush_cache()
 
-    def remap(self, mapping, *, copy=False) -> 'CGRContainer':
-        target_graph = self
-        if copy:
-            target_graph = self.copy() # Create a copy of CGRContainer to work on
+    def remap(self, mapping: Dict[int, int], *, copy=False):
+        target = self.copy() if copy else self
 
-        # super().remap (Graph.remap) remaps in-place on the instance it's called on.
-        # We call it on target_graph (either self or the copy).
-        # Graph.remap does not return anything explicitly other than None implicitly.
-        super(CGRContainer, target_graph).remap(mapping) # Call Graph.remap on target_graph
+        if len(mapping) != len(set(mapping.values())) or \
+                not (target._atoms.keys() - mapping.keys()).isdisjoint(mapping.values()):
+            raise ValueError('mapping overlap')
 
-        # Now, CGR-specific attributes need to be remapped on target_graph.
-        # The original logic used 'h' returned from super().remap which was assumed to be the remapped graph.
-        # With Graph.remap working in-place, target_graph is the one remapped.
-        
         mg = mapping.get
-        # These are attributes of target_graph that need remapping for their keys.
-        # Original attributes were on self, but if copy=True, we remapped a copy.
-        # So, if copy=True, target_graph already has copies of these dicts from self.copy().
-        # If copy=False, target_graph is self, and we are modifying self's dicts in-place.
+        target._atoms = {mg(n, n): atom for n, atom in target.atoms()}
+        target._bonds = {mg(n, n): {mg(m, m): bond for m, bond in m_bond.items()} for n, m_bond in target._bonds.items()}
+        target._p_charges = {mg(n, n): c for n, c in target._p_charges.items()}
+        target._p_radicals = {mg(n, n): r for n, r in target._p_radicals.items()}
+        target._hybridizations = {mg(n, n): h for n, h in target._hybridizations.items()}
+        target._p_hybridizations = {mg(n, n): h for n, h in target._p_hybridizations.items()}
+        target._plane = {mg(n, n): p for n, p in target._plane.items()}
+        target._conformers = [{mg(k, k): v for k, v in conf.items()} for conf in target._conformers]
+        target.flush_cache()
 
-        # Remap _p_charges, _p_radicals, _hybridizations, _p_hybridizations, _conformers keys
-        # Important: If copy=True, these dictionaries on target_graph are already copies.
-        # If copy=False, we are modifying them in-place on self.
-        
-        current_p_charges = target_graph._p_charges.copy() # Operate on a copy to avoid modification during iteration issues
-        target_graph._p_charges.clear()
-        for n, c_val in current_p_charges.items():
-            target_graph._p_charges[mg(n, n)] = c_val
-
-        current_p_radicals = target_graph._p_radicals.copy()
-        target_graph._p_radicals.clear()
-        for n, r_val in current_p_radicals.items():
-            target_graph._p_radicals[mg(n, n)] = r_val
-
-        current_hybridizations = target_graph._hybridizations.copy()
-        target_graph._hybridizations.clear()
-        for n, h_val in current_hybridizations.items():
-            target_graph._hybridizations[mg(n, n)] = h_val
-
-        current_p_hybridizations = target_graph._p_hybridizations.copy()
-        target_graph._p_hybridizations.clear()
-        for n, ph_val in current_p_hybridizations.items():
-            target_graph._p_hybridizations[mg(n, n)] = ph_val
-
-        remapped_conformers = []
-        for conf_dict in target_graph._conformers:
-            remapped_conf_dict = {mg(n, n): x for n, x in conf_dict.items()}
-            remapped_conformers.append(remapped_conf_dict)
-        target_graph._conformers = remapped_conformers
-        
-        # Remap _plane attribute if it exists and needs remapping (assuming it stores atomID keys)
-        if hasattr(target_graph, '_plane') and target_graph._plane:
-            current_plane = target_graph._plane.copy()
-            target_graph._plane.clear()
-            for n, xy_val in current_plane.items():
-                target_graph._plane[mg(n,n)] = xy_val
-
-        return target_graph # Return the (possibly new and) remapped graph
+        if copy:
+            return target
 
     def copy(self, **kwargs) -> 'CGRContainer':
-        copy = super().copy(**kwargs)
+        copy = object.__new__(self.__class__)
+        copy._atoms = {n: atom.copy(full=True) for n, atom in self._atoms.items()}
+        copy._bonds = cb = {}
+        for n, m_bond in self._bonds.items():
+            cb[n] = cbn = {}
+            for m, bond in m_bond.items():
+                if m in cb:
+                    cbn[m] = cb[m][n]
+                else:
+                    cbn[m] = bond.copy(full=True)
+
         copy._hybridizations = self._hybridizations.copy()
         copy._conformers = [c.copy() for c in self._conformers]
         copy._p_hybridizations = self._p_hybridizations.copy()
         copy._p_radicals = self._p_radicals.copy()
         copy._p_charges = self._p_charges.copy()
+        copy._plane = self._plane.copy()
+        copy.__dict__ = {}
         return copy
 
-    def substructure(self, atoms_ids_to_include_iterable, *, as_query: bool = False, **kwargs) -> Union['CGRContainer',
-                                                                                'query.QueryCGRContainer']:
+    def substructure(self, atoms, *, as_query: bool = False, **kwargs):
         """
         create substructure containing atoms from atoms list
 
-        :param atoms_ids_to_include_iterable: list/iterable of atom numbers for the substructure
-        :param meta: if True metadata will be copied to substructure (Note: 'meta' kwarg is not currently used)
+        :param atoms: list of atoms numbers of substructure
         :param as_query: return Query object based on graph substructure
         """
-        # Determine types for the new subgraph
-        SubGraphType = query.QueryCGRContainer if as_query else self.__class__
-        SubAtomType = DynamicQueryElement if as_query else DynamicElement
+        graph_type = query.QueryCGRContainer if as_query else self.__class__
+        atom_type = DynamicQueryElement if as_query else DynamicElement
 
-        # Create the new subgraph instance
-        sub = SubGraphType()
+        atoms_to_include = {n for n in atoms if n in self._atoms}
 
-        # Filter the input atom IDs to include only those present in the current graph
-        # and store them in a set for efficient lookup.
-        # This set, sub_atom_ids, represents the atoms that will actually be in the substructure.
-        sub_atom_ids = {atom_id for atom_id in atoms_ids_to_include_iterable if atom_id in self._atoms}
+        sub = graph_type()
+        if not hasattr(sub, '_plane'): # QueryCGR may not have plane
+            sub._plane = {}
 
-        # Add atoms to the substructure
-        original_atoms_dict = self._atoms
-        original_plane_coords = self._plane  # Assuming _plane exists for CGRContainer for xy coords
-        for n_id in sub_atom_ids:
-            original_atom_object = original_atoms_dict[n_id]
-            # Create a new atom of the appropriate type (DynamicElement or DynamicQueryElement)
-            # .from_atom should copy intrinsic properties like charge, isotope, etc.
-            new_atom_object = SubAtomType.from_atom(original_atom_object)
-            # Add the new atom to the subgraph.
-            # The add_atom method of CGRContainer/QueryCGRContainer will handle
-            # initializing product-state attributes (_p_charges, _p_radicals, etc.) to defaults.
-            sub.add_atom(new_atom_object, n_id, xy=original_plane_coords.get(n_id))
+        for n in atoms_to_include:
+            new_atom = atom_type.from_atom(self._atoms[n])
+            sub.add_atom(new_atom, n, xy=self._plane.get(n))
 
-        # Add bonds to the substructure
-        # Iterate through bonds of the original graph. If both atoms of a bond
-        # are in sub_atom_ids, add a copy of the bond to the new subgraph.
-        original_bonds_dict = self._bonds
-        for n1 in sub_atom_ids:
-            if n1 in original_bonds_dict:
-                for n2, bond_obj in original_bonds_dict[n1].items():
-                    if n2 in sub_atom_ids and n1 < n2:  # Add each bond only once
-                        # Create a copy of the bond object
-                        new_bond_obj = DynamicBond(bond_obj.order, bond_obj.p_order)
-                        sub.add_bond(n1, n2, new_bond_obj)
-        
-        # --- CGR-specific logic (adapted from the original method) ---
+        for n in atoms_to_include:
+            for m, bond in self._bonds[n].items():
+                if m in atoms_to_include and n < m:
+                    sub.add_bond(n, m, bond.copy())
 
-        # Populate product-state charges and radicals for atoms in the substructure,
-        # using values from the original CGRContainer. This overrides defaults set by sub.add_atom.
-        original_p_charges = self._p_charges
-        original_p_radicals = self._p_radicals
-        for n_id in sub_atom_ids: # Iterate over atoms actually added to sub
-            if n_id in original_p_charges: # Check if key exists in original
-                sub._p_charges[n_id] = original_p_charges[n_id]
-            if n_id in original_p_radicals:
-                sub._p_radicals[n_id] = original_p_radicals[n_id]
-            # If not present in original, they keep the defaults from sub.add_atom (0, False respectively)
+        sub._p_charges = {n: self._p_charges[n] for n in atoms_to_include if n in self._p_charges}
+        sub._p_radicals = {n: self._p_radicals[n] for n in atoms_to_include if n in self._p_radicals}
 
         if as_query:
-            # Populate query-specific attributes if the substructure is a QueryCGRContainer.
-            # Values are taken from the original CGRContainer.
-            original_hybridizations = self._hybridizations
-            original_p_hybridizations = self._p_hybridizations
-            # self.neighbors is a method of the original CGRContainer (self)
+            sub._hybridizations = {n: (self._hybridizations[n],) for n in atoms_to_include if n in self._hybridizations}
+            sub._p_hybridizations = {n: (self._p_hybridizations[n],) for n in atoms_to_include if n in self._p_hybridizations}
 
-            # QueryCGRContainer's add_atom initializes its _hybridizations, _p_hybridizations,
-            # _neighbors, _p_neighbors to defaults. Here we populate them with specific values from original.
-            for n_id in sub_atom_ids:
-                if n_id in original_hybridizations:
-                    sub._hybridizations[n_id] = (original_hybridizations[n_id],) # Query stores as tuple
-                if n_id in original_p_hybridizations:
-                    sub._p_hybridizations[n_id] = (original_p_hybridizations[n_id],) # Query stores as tuple
-                
-                # Get neighbor counts from the original CGRContainer instance 'self'
-                s_neighbors, p_neighbors = self.neighbors(n_id)
-                sub._neighbors[n_id] = (s_neighbors,) # Query stores as tuple
-                sub._p_neighbors[n_id] = (p_neighbors,) # Query stores as tuple
+            sub._neighbors = cn = {}
+            sub._p_neighbors = cpn = {}
+            for n in atoms_to_include:
+                sn, pn = self.neighbors(n)
+                cn[n] = (sn,)
+                cpn[n] = (pn,)
         else:
-            # CGRContainer-specific finalization for the substructure.
-            # Copy conformers, filtering for atoms present in the substructure.
-            sub._conformers = []
-            for conf_dict in self._conformers: # self._conformers are from original CGR
-                # Create new dict for sub_conf, only including atoms present in the substructure
-                sub_conf_dict = {n_id: pos for n_id, pos in conf_dict.items() if n_id in sub_atom_ids}
-                if sub_conf_dict: # Only add if the conformer dict is not empty
-                    sub._conformers.append(sub_conf_dict)
+            sub._conformers = [{n: c[n] for n in atoms_to_include if n in c} for c in self._conformers]
+            # Hybridizations are already calculated by add_bond, but we can re-ensure.
+            for n in sub._atoms:
+                sub._calc_hybridization(n)
 
-            # Recalculate hybridizations for the new substructure context.
-            # CGRContainer.add_atom initialized _hybridizations & _p_hybridizations to 1.
-            # CGRContainer.add_bond (called when bonds were added to 'sub') calls 
-            # _calc_hybridization for bonded atoms.
-            # This explicit loop ensures all atoms in the substructure (including any isolated ones)
-            # have their hybridizations calculated based on the final bond structure of 'sub'.
-            # This matches the original code's else block's intent.
-            sub._hybridizations = {}
-            sub._p_hybridizations = {}
-            for n_id_in_sub_graph in sub._atoms: # Iterate over keys of sub._atoms dict
-               sub._calc_hybridization(n_id_in_sub_graph)
-        
-        return sub, sub_atom_ids # Return the new substructure and the set of atom IDs in it
+        return sub, atoms_to_include
 
     def augmented_substructure(self, atoms, deep: int = 1):
-        atoms = set(atoms)
+        atoms_set = set(atoms)
         bonds = self._bonds
 
         for _ in range(deep):
-            n = {y for x in atoms for y in bonds[x]} | atoms
-            if n == atoms:
+            n = {y for x in atoms_set for y in bonds.get(x, {})} | atoms_set
+            if n == atoms_set:
                 break
-            atoms = n
-        return self.substructure(atoms)
+            atoms_set = n
+        return self.substructure(atoms_set)
 
-    def union(self, other, **kwargs) -> 'CGRContainer':
+    def union(self, other, *, remap: bool = False, copy: bool = True):
         from . import molecule
-        if isinstance(other, CGRContainer):
-            # Graph.union does not accept atom_type, bond_type and returns only the unioned graph `u`.
-            # The `other` object reference passed to super().union is a copy made within Graph.union if remapping occurs.
-            # We need to update CGR-specific attributes based on the `other` that was passed into this method,
-            # considering that its atom IDs might have been remapped if `remap=True` was in kwargs
-            # and a collision occurred. This is complex if `other` is remapped internally by super().union
-            # and that mapping isn't returned.
-            # For now, assume `other`'s attributes are used pre-super-union or the mapping complexity is handled elsewhere.
-            # Simplification: call super().union without the unsupported kwargs.
-            
-            # Store original `other` attributes that might be needed if `other` itself is modified by `super().union`
-            # or if its atom IDs get remapped.
-            # This is tricky. Let's assume other._p_charges etc. are on the input `other` instance.
-            # If `other` is remapped by `super().union`, we need that remapped `other` or the mapping.
-            # `MoleculeContainer.union` returns `u, other_graph_processed_object` which is what we need.
-            # Assuming `Graph.union` should be modified to return `u, processed_other_copy` as well.
-            # If `Graph.union` is NOT changed, this current CGRContainer.union will be problematic for remapped `other`.
-            
-            # Let's proceed with the minimal change to avoid the TypeError for now.
-            # This means if `other` is remapped by `super().union`, the ._p_charges.update below might use wrong keys.
-            u = super().union(other, **kwargs) # remap kwarg is passed in kwargs
-            
-            # `other` here refers to the original `other` passed to CGRContainer.union.
-            # If `super().union` remapped `other` (it operates on a copy), then using `other._p_charges` directly 
-            # might be incorrect if atom IDs changed. This logic needs to be robust to remapping.
-            # For now, we assume the keys in other._p_charges are still relevant for `u`.
-            u._conformers.clear() # This is from original CGRContainer.union
-            u._p_charges.update(other._p_charges)
-            u._p_radicals.update(other._p_radicals)
-            u._hybridizations.update(other._hybridizations)
-            u._p_hybridizations.update(other._p_hybridizations)
-            return u
-        elif isinstance(other, molecule.MoleculeContainer):
-            # Similar issue here with super().union and its return / kwargs
-            u = super().union(other, **kwargs) # remap kwarg is passed in kwargs
+        if isinstance(other, (CGRContainer, molecule.MoleculeContainer)):
+            if self._atoms.keys() & other._atoms.keys():
+                if not remap:
+                    raise MappingError('mapping of graphs is not disjoint')
+                other = other.copy()
+                other.remap({n: i for i, n in enumerate(other, start=max(self._atoms, default=0) + 1)})
+            else:
+                other = other.copy()
 
-            # `other` here is the MoleculeContainer. Its ._charges, ._radicals are used.
-            # If atom IDs were remapped by super().union, this update is problematic.
+            u = self.copy() if copy else self
+            u._atoms.update(other._atoms)
+            u._bonds.update(other._bonds)
+
+            if isinstance(other, CGRContainer):
+                u._p_charges.update(other._p_charges)
+                u._p_radicals.update(other._p_radicals)
+                u._hybridizations.update(other._hybridizations)
+                u._p_hybridizations.update(other._p_hybridizations)
+                u._plane.update(other._plane)
+            elif isinstance(other, molecule.MoleculeContainer):
+                u._p_charges.update(other._charges) # Product state takes reactant state
+                u._p_radicals.update(other._radicals)
+                u._hybridizations.update(other._hybridizations)
+                u._p_hybridizations.update(other._hybridizations) # And for product
+                u._plane.update(other._plane)
+
             u._conformers.clear()
-            u._p_charges.update(other._charges) # MoleculeContainer has ._charges
-            u._p_radicals.update(other._radicals) # MoleculeContainer has ._radicals
-            u._hybridizations.update(other._hybridizations) # MoleculeContainer has ._hybridizations
-            u._p_hybridizations.update(other._hybridizations) # This seems to assume molecule has p_hybridizations? Check MoleculeContainer.
-                                                              # MoleculeContainer uses self._hybridizations. So this line is likely an error.
-                                                              # CGR needs p_hybridizations, but molecule has only one set.
-                                                              # Let's assume it meant to copy other._hybridizations to u._p_hybridizations for CGR context.
-            # Revisit this logic. For now, focus on removing atom_type/bond_type from super() call.
+            if not copy:
+                u.flush_cache()
             return u
         else:
             raise TypeError('CGRContainer or MoleculeContainer expected')
@@ -525,7 +489,7 @@ class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan
 
     def get_mapping(self, other: 'CGRContainer', **kwargs):
         if isinstance(other, CGRContainer):
-            return super().get_mapping(other, **kwargs)
+            return self._get_mapping(other, **kwargs)
         raise TypeError('CGRContainer expected')
 
     def get_mcs_mapping(self, other: 'CGRContainer', **kwargs):
@@ -598,25 +562,11 @@ class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan
         self._p_hybridizations[n] = p_hybridization
 
     def __getstate__(self):
-        return {'conformers': self._conformers, 'p_charges': self._p_charges, 'p_radicals': self._p_radicals,
-                **super().__getstate__()}
+        return {slot: getattr(self, slot) for slot in self.__slots__ if hasattr(self, slot)}
 
     def __setstate__(self, state):
-        self._p_charges = state['p_charges']
-        self._p_radicals = state['p_radicals']
-        super().__setstate__(state)
-        if 'conformers' in state:
-            self._conformers = state['conformers']
-        else:
-            self._conformers = [] 
-
-        # restore query marks
-        self._hybridizations = {}
-        self._p_hybridizations = {}
-        # Iterate over atom IDs that have bond information to recalculate hybridizations
-        # state['_bonds'] stores the bonds dictionary {atom_id: {neighbor_id: bond_obj, ...}, ...}
-        for n in state.get('_bonds', {}).keys(): 
-            self._calc_hybridization(n)
+        for slot, value in state.items():
+            setattr(self, slot, value)
 
     def __iter__(self):
         return iter(self._atoms)
@@ -624,6 +574,15 @@ class CGRContainer(Graph, CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan
     def __len__(self):
         return len(self._atoms)
 
+    def __copy__(self):
+        return self.copy()
+
+    def __or__(self, other):
+        return self.union(other, remap=True)
+
+    def __ior__(self, other):
+        return self.union(other, remap=True, copy=False)
+    
     @cached_property
     def center_atoms(self) -> Tuple[int, ...]:
         """ Get list of atoms of reaction center (atoms with dynamic: bonds, charges, radicals).

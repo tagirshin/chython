@@ -150,8 +150,6 @@ class Graph(Generic[Atom, Bond], ABC):
             raise BondNotFound(f"Bond between {n} and {m} not found for deletion")
         del self._bonds[n][m]
         del self._bonds[m][n]
-        # If a neighbor list becomes empty, consider if the key self._bonds[x] should be removed.
-        # Current Graph structure keeps it: self._bonds[n] = {} if atom n has no bonds.
 
     def copy(self):
         """
@@ -239,21 +237,12 @@ class Graph(Generic[Atom, Bond], ABC):
         for slot in self.__slots__:
             if hasattr(self, slot):
                 state[slot] = getattr(self, slot)
-        # If __dict__ is not in __slots__ but is used (e.g. for cached_property), include it.
-        # However, self.__dict__ IS in __slots__ for Graph class.
         return state
 
     def __setstate__(self, state):
         """Restore state from dictionary."""
         for slot, value in state.items():
             setattr(self, slot, value)
-        # If __dict__ was part of state (as it is for Graph), it's restored by setattr.
-        # If any post-unpickle initialization is needed (like rebuilding caches not stored),
-        # it should be done here or in a __setstate_finalize__ type method if complex.
-        # For Graph, a flush_cache might be good if __dict__ stored cached values.
-        # However, __getstate__ saves the current __dict__, so caches are saved.
-        # If flush_cache clears essential non-cached data from __dict__, it shouldn't be called blindly.
-        # For now, direct restoration of slots including __dict__ is the primary goal.
 
 
 __all__ = ['Graph']

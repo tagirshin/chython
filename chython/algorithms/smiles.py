@@ -22,7 +22,7 @@ from CachedMethods import cached_method
 from collections import defaultdict
 from functools import cached_property
 from heapq import heappop, heappush
-from itertools import product
+from itertools import product, count
 from random import random
 from typing import Callable, Optional, Tuple, TYPE_CHECKING, Union
 
@@ -164,7 +164,7 @@ class Smiles(ABC):
         bonds = self._bonds
         atoms_set = set(self._atoms)
         seen = {}
-        cycle = 0
+        cycle_counter = count(1)
         casted_cycles = {}
         string = []
         order = []
@@ -221,7 +221,7 @@ class Smiles(ABC):
                     elif (child, parent) not in disconnected:
                         disconnected.add((parent, child))
                         disconnected.add((child, parent))
-                        cycle += 1
+                        cycle = next(cycle_counter)
                         tokens[parent].append((child, cycle))
                         tokens[child].append((parent, cycle))
 
@@ -263,15 +263,9 @@ class Smiles(ABC):
             # get order of each atom in ring closures
             rings_order = {token: n for n, token in enumerate(smiles) if token in tokens}
             for token in rings_order:  # prepare closure numbers
-                released = []
                 # order closure atoms as in smiles string
                 for _, c in sorted(tokens[token], key=lambda x: rings_order[x[0]]):
-                    if c in casted_cycles:  # release ring closure number
-                        released.append(casted_cycles[c])
-                    else:
-                        casted_cycles[c] = heappop(heap)
-                for c in released:  # delayed release to avoid duplicates. e.g. C1..C11..C1 instead of C1..C12..C2
-                    heappush(heap, c)
+                    casted_cycles.setdefault(c, len(casted_cycles) + 1)
 
             # prepare new neighbors order for stereo sign calculation
             for token in smiles:
@@ -568,9 +562,6 @@ class CGRSmiles(Smiles):
         if kwargs.get('aromatic', True):
             if order == p_order == 4:
                 return ''
-            elif order == p_order == 1 and (self._hybridizations[n] == 4 or self._p_hybridizations[n] == 4) and \
-                    (self._hybridizations[m] == 4 or self._p_hybridizations[m] == 4):
-                return '-'
         return dyn_order_str[(order, p_order)]
 
 

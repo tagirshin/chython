@@ -10,7 +10,7 @@ from ..periodictable import (Element, DynamicElement, QueryElement, DynamicQuery
 
 
 class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
-    __slots__ = ('_p_charges', '_p_radicals', '_neighbors', '_hybridizations', '_p_neighbors', '_p_hybridizations')
+    __slots__ = ('_p_charges', '_p_radicals', '_neighbors', '_hybridizations', '_p_neighbors', '_p_hybridizations', '_plane')
 
     def __init__(self):
         self._p_charges: Dict[int, int] = {}
@@ -19,6 +19,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         self._hybridizations: Dict[int, Tuple[int, ...]] = {}
         self._p_neighbors: Dict[int, Tuple[int, ...]] = {}
         self._p_hybridizations: Dict[int, Tuple[int, ...]] = {}
+        self._plane: Dict[int, Tuple[float, float]] = {}
         super().__init__()
 
     def _validate_charge(self, charge: int) -> int:
@@ -37,6 +38,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                  hybridization: Union[int, List[int], Tuple[int, ...], None] = None,
                  p_neighbors: Union[int, List[int], Tuple[int, ...], None] = None,
                  p_hybridization: Union[int, List[int], Tuple[int, ...], None] = None, **kwargs):
+        xy_coord = kwargs.pop('xy', None)
         neighbors = self._validate_neighbors(neighbors)
         p_neighbors = self._validate_neighbors(p_neighbors)
         hybridization = self._validate_hybridization(hybridization)
@@ -60,6 +62,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 raise TypeError('QueryElement object expected')
 
         _map = super().add_atom(atom, *args, **kwargs)
+        if xy_coord is not None:
+            self._plane[_map] = xy_coord
         self._p_charges[_map] = p_charge
         self._p_radicals[_map] = p_is_radical
         self._neighbors[_map] = neighbors

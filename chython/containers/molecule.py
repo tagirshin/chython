@@ -20,7 +20,7 @@ from CachedMethods import cached_args_method
 from collections import Counter, defaultdict
 from functools import cached_property
 from numpy import uint, zeros
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union, Optional, Set
 from zlib import compress, decompress
 from .bonds import Bond, DynamicBond
 from .cgr import CGRContainer
@@ -54,10 +54,11 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
 
     def __init__(self):
         super().__init__()
-        self._meta = None
-        self._name = None
-        self._changed = None
-        self._backup = None
+        self._meta: Optional[Dict] = None
+        self._name: str = ''
+        self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
+        self._changed: Optional[Set[int]] = None
+        self._backup: Optional[Dict] = None
 
     @property
     def meta(self) -> Dict:
@@ -166,6 +167,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
                 atom = Element.from_atomic_number(atom)()
             else:
                 raise TypeError('Element object expected')
+        
+        charge = kwargs.pop('charge', 0)
+        is_radical = kwargs.pop('is_radical', False)
+        xy = kwargs.pop('xy', (0.0, 0.0))
+
+        atom.charge = charge
+        atom.is_radical = is_radical
+        atom.xy = xy
 
         n = super().add_atom(atom, *args, **kwargs)
         if self._changed is None:

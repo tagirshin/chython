@@ -17,6 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from re import compile, match, search
+from itertools import permutations
 from ...containers.bonds import QueryBond
 from ...exceptions import IncorrectSmiles, IncorrectSmarts
 
@@ -45,6 +46,8 @@ from ...exceptions import IncorrectSmiles, IncorrectSmarts
 # 10: query OR bond
 # 11: query NOT bond
 # 12: in ring bond
+# 13: CGR bond
+# 14: CGR atom
 
 
 iso_re = compile(r'^[0-9]+')
@@ -55,8 +58,20 @@ str_re = compile(r'@[@?]?')
 replace_dict = {'-': 1, '=': 2, '#': 3, ':': 4, '~': 8}
 not_dict = {'-': [2, 3, 4], '=': [1, 3, 4], '#': [1, 2, 4], ':': [1, 2, 3]}
 atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsbt][a-ik-pr-vy]?)(@@|@)?(H[1-4]?)?([+-][1-4+-]?)?(:[0-9]{1,4})?')
+dyn_atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsb][a-ik-pr-vy]?)([+-0][1-4+-]?(>[+-0][1-4+-]?)?)?([*^](>[*^])?)?')
 charge_dict = {'+': 1, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
                '-': -1, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
+dynamic_bonds = {'.>-': (None, 1), '.>=': (None, 2), '.>#': (None, 3), '.>:': (None, 4), '.>~': (None, 8),
+                 '->.': (1, None), '->=': (1, 2), '->#': (1, 3), '->:': (1, 4), '->~': (1, 8),
+                 '=>.': (2, None), '=>-': (2, 1), '=>#': (2, 3), '=>:': (2, 4), '=>~': (2, 8),
+                 '#>.': (3, None), '#>-': (3, 1), '#>=': (3, 2), '#>:': (3, 4), '#>~': (3, 8),
+                 ':>.': (4, None), ':>-': (4, 1), ':>=': (4, 2), ':>#': (4, 3), ':>~': (4, 8),
+                 '~>.': (8, None), '~>-': (8, 1), '~>=': (8, 2), '~>#': (8, 3), '~>:': (8, 4)}
+dyn_charge_dict = {'-4': -4, '-3': -3, '-2': -2, '--': -2, '-': -1, '0': 0, '+': 1, '++': 2, '+2': 2, '+3': 3, '+4': 4}
+tmp = {f'{i}>{j}': (x, ('charge', y - x)) for (i, x), (j, y) in permutations(dyn_charge_dict.items(), 2) if x != y}
+dyn_charge_dict = {k: (v,) for k, v in dyn_charge_dict.items()}
+dyn_charge_dict.update(tmp)
+dyn_radical_dict = {'*': (True,), '*>^': (True, ('radical', None)), '^>*': (False, ('radical', None))}
 
 
 def _tokenize(smiles):
@@ -90,7 +105,17 @@ def _tokenize(smiles):
                 raise IncorrectSmiles(']..]')
             elif not token:
                 raise IncorrectSmiles('empty [] brackets')
-            tokens.append((5, ''.join(token)))
+            if '>' in token:
+                s = ''.join(token)
+                if len(s) == 3:  # bond only possible
+                    try:
+                        tokens.append((13, dynamic_bonds[s]))
+                    except KeyError:
+                        raise IncorrectSmiles(f'invalid dynamic bond token {s}')
+                else:  # dynamic atom token
+                    tokens.append(_dyn_atom_parse(s))
+            else:
+                tokens.append((5, ''.join(token)))
             token = None
             token_type = 0  # mark as atom
         elif token_type == 5:  # grow token with brackets. skip validation
@@ -343,6 +368,44 @@ def _query_parse(token):
             else:  # z
                 out['hybridization'] = p
     return 0, out
+
+
+def _dyn_atom_parse(token):
+    # [isotope]Element[element][+-charge[>+-charge]][*^[>*^]]
+    _match = dyn_atom_re.fullmatch(token)
+    if _match is None:
+        raise IncorrectSmiles(f'atom token invalid {token}')
+    isotope, element, charge, _, is_radical, _ = _match.groups()
+
+    if isotope:
+        isotope = int(isotope)
+
+    if charge:
+        try:
+            charge, *cgr = dyn_charge_dict[charge]
+        except KeyError:
+            raise IncorrectSmiles('charge token invalid')
+    else:
+        charge = 0
+        cgr = []
+
+    if is_radical:
+        try:
+            is_radical, *dyn = dyn_radical_dict[is_radical]
+        except KeyError:
+            raise IncorrectSmiles('invalid dynamic radical token')
+        else:
+            cgr.extend(dyn)
+    else:
+        is_radical = False
+
+    if element in ('c', 'n', 'o', 'p', 's', 'as', 'se', 'b'):
+        _type = 12
+        element = element.capitalize()
+    else:
+        _type = 11
+    return _type, {'element': element, 'isotope': isotope, 'is_radical': is_radical,
+                   'parsed_mapping': 0, 'cgr': cgr, 'charge': charge}
 
 
 def smiles_tokenize(smi):
