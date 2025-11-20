@@ -19,24 +19,25 @@
 #
 from math import sqrt
 from random import random
-from typing import TYPE_CHECKING, Union, Dict
+from typing import TYPE_CHECKING, Union, Dict, Literal
 from ...exceptions import ImplementationError
 from ...periodictable.base.vector import Vector
 
-
-
-from importlib.resources import files
 
 if TYPE_CHECKING:
     from chython import MoleculeContainer
 
 try:
-    from py_mini_racer import MiniRacer, JSEvalException
+    from py_mini_racer import MiniRacer
+    try:
+        from importlib.resources import files
+    except ImportError:  # python3.8
+        from importlib_resources import files
 
     ctx = MiniRacer()
     ctx.eval('const self = this')
     ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
-except RuntimeError:
+except (ImportError, RuntimeError):
     ctx = None
 
 
@@ -45,27 +46,46 @@ class Calculate2DMolecule:
     _atoms: Dict[int, 'Element']
     _bonds: Dict[int, Dict[int, 'Bond']]
 
-    def clean2d(self: Union['MoleculeContainer', 'Calculate2DMolecule']):
+    def clean2d(self: Union['MoleculeContainer', 'Calculate2DMolecule'],
+                *, engine: Literal['rdkit', 'smilesdrawer'] = None):
         """
-        Calculate 2d layout of graph. https://pubs.acs.org/doi/10.1021/acs.jcim.7b00425 JS implementation used.
-        """
-        if ctx is None:
-            raise ImportError('py_mini_racer is not installed or broken')
-        plane = {}
-        entry = iter(sorted(self, key=lambda n: len(self._bonds[n])))
-        for _ in range(min(5, len(self))):
-            smiles, order = self.__clean2d_prepare(next(entry))
-            try:
-                xy = ctx.call('$.clean2d', smiles)
-            except JSEvalException:
-                continue
-            break
-        else:
-            raise ImplementationError
+        Calculate 2d layout of graph.
 
-        shift_x, shift_y = xy[0]
-        for n, (x, y) in zip(order, xy):
-            plane[n] = (x - shift_x, shift_y - y)
+        By default, https://pubs.acs.org/doi/10.1021/acs.jcim.7b00425 JS implementation is used.
+        Can be changed globally with the `chython.clean2d_engine` parameter.
+
+        :param engine: override globally set engine
+        """
+        if engine is None:
+            from chython import clean2d_engine as engine
+
+        plane = {}
+        if engine == 'rdkit':
+            from rdkit.Chem.AllChem import Compute2DCoords
+
+            mol = self.to_rdkit(keep_mapping=False)
+            Compute2DCoords(mol)
+            # set coordinates from the first rdkit conformer. usually it's 2d layout
+            for n, (x, y, _) in zip(self, mol.GetConformers()[0].GetPositions()):
+                plane[n] = (x, y)
+        elif engine == 'smilesdrawer':
+            if ctx is None:
+                raise ImportError('mini_racer is not installed or broken')
+            entry = iter(sorted(self, key=lambda n: len(self._bonds[n])))
+            for _ in range(min(5, len(self))):
+                smiles, order = self.__clean2d_prepare(next(entry))
+                try:
+                    xy = ctx.call('$.clean2d', smiles)
+                except Exception:
+                    continue
+                break
+            else:
+                raise ImplementationError
+
+            shift_x, shift_y = xy[0]
+            for n, (x, y) in zip(order, xy):
+                plane[n] = (x - shift_x, shift_y - y)
+        else: raise ValueError(f'Invalid clean2d engine: {engine}')
 
         bonds = []
         for n, m, _ in self.bonds():
