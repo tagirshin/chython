@@ -274,6 +274,15 @@ class TestCGRContainer(unittest.TestCase):
         self.assertEqual(cgr_original._hybridizations, unpickled_cgr._hybridizations)
         self.assertEqual(cgr_original._conformers, unpickled_cgr._conformers)
 
+    def test_centers_list_and_center_bonds(self):
+        cgr = create_simple_cgr()
+        # whole structure is one center because both bonds are dynamic
+        centers = cgr.centers_list
+        self.assertEqual(len(centers), 1)
+        self.assertEqual(set(centers[0]), {1, 2, 3})
+        # dynamic bond pairs
+        self.assertEqual(set(map(frozenset, cgr.center_bonds)), {frozenset({1, 2}), frozenset({2, 3})})
+
 
 class TestCGRBehavior(unittest.TestCase):
     def test_substructure_returns_cgr(self):
