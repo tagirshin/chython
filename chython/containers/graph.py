@@ -65,8 +65,7 @@ class Graph(Generic[Atom, Bond], ABC):
 
     def has_bond(self, n: int, m: int) -> bool:
         try:
-            self._bonds[n]  # check if atom exists
-            return n in self._bonds[m]
+            return m in self._bonds[n]
         except KeyError:
             raise AtomNotFound
 
@@ -193,7 +192,7 @@ class Graph(Generic[Atom, Bond], ABC):
             if not remap:
                 raise MappingError('mapping of graphs is not disjoint')
             other = other.copy()
-            other.remap({n: i for i, n in enumerate(other, start=max(self._atoms) + 1)})
+            other.remap({n: i for i, n in enumerate(other, start=max(self._atoms, default=0) + 1)})
         else:
             other = other.copy()  # make a copy
         u = self.copy() if copy else self

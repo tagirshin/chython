@@ -17,11 +17,10 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from functools import cached_property
-from typing import Dict, Iterator, Tuple, Optional, Collection, List, Union
+from typing import Dict, Iterator, Tuple, Optional, List, Union
 from collections import defaultdict
 
 from .bonds import DynamicBond, Bond
-from .graph import Graph
 from . import cgr_query as query
 
 from ..algorithms.fingerprints import FingerprintsCGR
@@ -38,7 +37,7 @@ from ..exceptions import MappingError, AtomNotFound, BondNotFound
 
 
 class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
-    __slots__ = ('_atoms', '_bonds', '_conformers', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
+    __slots__ = ('_atoms', '_bonds', '_conformers', '_charges', '_radicals', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
     _atoms: Dict[int, DynamicElement]
     _bonds: Dict[int, Dict[int, DynamicBond]]
 
@@ -46,6 +45,8 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
         self._atoms: Dict[int, DynamicElement] = {}
         self._bonds: Dict[int, Dict[int, DynamicBond]] = {}
         self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
+        self._charges: Dict[int, int] = {}
+        self._radicals: Dict[int, bool] = {}
         self._p_charges: Dict[int, int] = {}
         self._p_radicals: Dict[int, bool] = {}
         self._hybridizations: Dict[int, int] = {}
@@ -132,11 +133,14 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
 
         if not isinstance(atom, DynamicElement):
             if isinstance(atom, Element):
-                atom = DynamicElement.from_atomic_number(atomic_number=atom.atomic_number, isotope=atom.isotope, **kwargs)
+                atom_cls = DynamicElement.from_atomic_number(atom.atomic_number)
+                atom = atom_cls(atom.isotope)
             elif isinstance(atom, str):
-                atom = DynamicElement.from_symbol(symbol=atom, isotope=None, **kwargs)
+                atom_cls = DynamicElement.from_symbol(atom)
+                atom = atom_cls()
             elif isinstance(atom, int):
-                atom = DynamicElement.from_atomic_number(atomic_number=atom, isotope=None, **kwargs)
+                atom_cls = DynamicElement.from_atomic_number(atom)
+                atom = atom_cls()
             else:
                 raise TypeError('DynamicElement object expected')
 
@@ -152,7 +156,8 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
 
         if xy_coord is not None:
             self._plane[n] = xy_coord
-
+        self._charges[n] = atom.charge
+        self._radicals[n] = atom.is_radical
         self._p_charges[n] = p_charge
         self._p_radicals[n] = p_is_radical
         self._hybridizations[n] = 1
@@ -199,6 +204,8 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             del self._bonds[n]
         del self._atoms[n]
 
+        if n in self._charges: del self._charges[n]
+        if n in self._radicals: del self._radicals[n]
         if n in self._p_charges: del self._p_charges[n]
         if n in self._p_radicals: del self._p_radicals[n]
         if n in self._hybridizations: del self._hybridizations[n]
@@ -231,6 +238,8 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
         mg = mapping.get
         target._atoms = {mg(n, n): atom for n, atom in target.atoms()}
         target._bonds = {mg(n, n): {mg(m, m): bond for m, bond in m_bond.items()} for n, m_bond in target._bonds.items()}
+        target._charges = {mg(n, n): c for n, c in target._charges.items()}
+        target._radicals = {mg(n, n): r for n, r in target._radicals.items()}
         target._p_charges = {mg(n, n): c for n, c in target._p_charges.items()}
         target._p_radicals = {mg(n, n): r for n, r in target._p_radicals.items()}
         target._hybridizations = {mg(n, n): h for n, h in target._hybridizations.items()}
@@ -259,6 +268,8 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
         copy._p_hybridizations = self._p_hybridizations.copy()
         copy._p_radicals = self._p_radicals.copy()
         copy._p_charges = self._p_charges.copy()
+        copy._charges = self._charges.copy()
+        copy._radicals = self._radicals.copy()
         copy._plane = self._plane.copy()
         copy.__dict__ = {}
         return copy
@@ -288,6 +299,11 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                 if m in atoms_to_include and n < m:
                     sub.add_bond(n, m, bond.copy())
 
+        if not hasattr(sub, '_charges'):
+            sub._charges = {}
+            sub._radicals = {}
+        sub._charges.update({n: self._charges[n] for n in atoms_to_include if n in self._charges})
+        sub._radicals.update({n: self._radicals[n] for n in atoms_to_include if n in self._radicals})
         sub._p_charges = {n: self._p_charges[n] for n in atoms_to_include if n in self._p_charges}
         sub._p_radicals = {n: self._p_radicals[n] for n in atoms_to_include if n in self._p_radicals}
 
@@ -307,7 +323,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             for n in sub._atoms:
                 sub._calc_hybridization(n)
 
-        return sub, atoms_to_include
+        return sub
 
     def augmented_substructure(self, atoms, deep: int = 1):
         atoms_set = set(atoms)
@@ -336,17 +352,24 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             u._bonds.update(other._bonds)
 
             if isinstance(other, CGRContainer):
+                u._charges.update(other._charges)
+                u._radicals.update(other._radicals)
                 u._p_charges.update(other._p_charges)
                 u._p_radicals.update(other._p_radicals)
                 u._hybridizations.update(other._hybridizations)
                 u._p_hybridizations.update(other._p_hybridizations)
                 u._plane.update(other._plane)
             elif isinstance(other, molecule.MoleculeContainer):
-                u._p_charges.update(other._charges) # Product state takes reactant state
-                u._p_radicals.update(other._radicals)
-                u._hybridizations.update(other._hybridizations)
-                u._p_hybridizations.update(other._hybridizations) # And for product
-                u._plane.update(other._plane)
+                oc = {n: a.charge for n, a in other._atoms.items()}
+                or_ = {n: a.is_radical for n, a in other._atoms.items()}
+                op = {n: getattr(a, 'xy', (0.0, 0.0)) for n, a in other._atoms.items()}
+                u._charges.update(oc)
+                u._radicals.update(or_)
+                u._p_charges.update(oc) # Product state takes reactant state
+                u._p_radicals.update(or_)
+                u._hybridizations.update(other._hybridizations if hasattr(other, '_hybridizations') else {})
+                u._p_hybridizations.update(other._hybridizations if hasattr(other, '_hybridizations') else {})
+                u._plane.update(op)
 
             u._conformers.clear()
             if not copy:
@@ -376,9 +399,9 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
 
         if isinstance(other, molecule.MoleculeContainer):
             oa = other._atoms
-            oc = other._charges
-            or_ = other._radicals
-            op = other._plane
+            oc = {n: a.charge for n, a in oa.items()}
+            or_ = {n: a.is_radical for n, a in oa.items()}
+            op = {n: getattr(a, 'xy', (0.0, 0.0)) for n, a in oa.items()}
             ob = other._bonds
             common = sa.keys() & other
 

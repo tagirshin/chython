@@ -53,11 +53,11 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
             if isinstance(atom, AnyElement):
                 atom = DynamicAnyElement()
             elif isinstance(atom, (Element, QueryElement, DynamicElement)):
-                atom = DynamicQueryElement.from_atomic_number(atom.atomic_number)(atom.isotope)
+                atom = DynamicQueryElement.from_atomic_number(atom.atomic_number, isotope=atom.isotope)
             elif isinstance(atom, str):
-                atom = DynamicQueryElement.from_symbol(atom)()
+                atom = DynamicQueryElement.from_symbol(atom, isotope=None)
             elif isinstance(atom, int):
-                atom = DynamicQueryElement.from_atomic_number(atom)()
+                atom = DynamicQueryElement.from_atomic_number(atom, isotope=None)
             else:
                 raise TypeError('QueryElement object expected')
 
@@ -87,6 +87,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         del self._hybridizations[n]
         del self._p_neighbors[n]
         del self._p_hybridizations[n]
+        if n in self._plane:
+            del self._plane[n]
 
     def remap(self, mapping, *, copy=False) -> 'QueryCGRContainer':
         h = super().remap(mapping, copy=copy)
@@ -140,6 +142,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         copy._p_hybridizations = self._p_hybridizations.copy()
         copy._p_radicals = self._p_radicals.copy()
         copy._p_charges = self._p_charges.copy()
+        copy._plane = self._plane.copy()
         return copy
 
     def substructure(self, atoms, **kwargs) -> 'QueryCGRContainer':
@@ -149,35 +152,46 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         :param atoms: list of atoms numbers of substructure
         :param meta: if True metadata will be copied to substructure
         """
-        sub, atoms = super().substructure(atoms, graph_type=self.__class__,
-                                          atom_type=DynamicQueryElement, bond_type=DynamicBond, **kwargs)
-        spc = self._p_charges
-        spr = self._p_radicals
-        sn = self._neighbors
-        sh = self._hybridizations
-        spn = self._p_neighbors
-        sph = self._p_hybridizations
+        atoms_set = {n for n in atoms if n in self._atoms}
+        sub = self.__class__()
 
-        sub._p_charges = {n: spc[n] for n in atoms}
-        sub._p_radicals = {n: spr[n] for n in atoms}
-        sub._neighbors = {n: sn[n] for n in atoms}
-        sub._hybridizations = {n: sh[n] for n in atoms}
-        sub._p_neighbors = {n: spn[n] for n in atoms}
-        sub._p_hybridizations = {n: sph[n] for n in atoms}
+        for n in atoms_set:
+            a = DynamicQueryElement.from_atom(self._atoms[n])
+            sub.add_atom(a, n, xy=self._plane.get(n),
+                         p_charge=self._p_charges.get(n, 0), p_is_radical=self._p_radicals.get(n, False),
+                         neighbors=self._neighbors.get(n, ()), hybridization=self._hybridizations.get(n, ()),
+                         p_neighbors=self._p_neighbors.get(n, ()), p_hybridization=self._p_hybridizations.get(n, ()))
+
+        for n in atoms_set:
+            for m, bond in self._bonds[n].items():
+                if m in atoms_set and n < m:
+                    sub.add_bond(n, m, bond.copy())
         return sub
 
-    def union(self, other, **kwargs) -> 'QueryCGRContainer':
-        if isinstance(other, QueryCGRContainer):
-            u, other = super().union(other, atom_type=DynamicQueryElement, bond_type=DynamicBond, **kwargs)
-            u._p_charges.update(other._p_charges)
-            u._p_radicals.update(other._p_radicals)
-            u._neighbors.update(other._neighbors)
-            u._hybridizations.update(other._hybridizations)
-            u._p_neighbors.update(other._p_neighbors)
-            u._p_hybridizations.update(other._p_hybridizations)
-            return u
-        else:
+    def union(self, other, *, remap: bool = False, copy: bool = True) -> 'QueryCGRContainer':
+        if not isinstance(other, QueryCGRContainer):
             raise TypeError('QueryCGRContainer expected')
+
+        u = super().union(other, remap=remap, copy=copy)
+        if copy:
+            # when copy, super().union already returned new instance (u)
+            u._p_charges = {**self._p_charges, **other._p_charges}
+            u._p_radicals = {**self._p_radicals, **other._p_radicals}
+            u._neighbors = {**self._neighbors, **other._neighbors}
+            u._hybridizations = {**self._hybridizations, **other._hybridizations}
+            u._p_neighbors = {**self._p_neighbors, **other._p_neighbors}
+            u._p_hybridizations = {**self._p_hybridizations, **other._p_hybridizations}
+            u._plane = {**self._plane, **other._plane}
+        else:
+            self._p_charges.update(other._p_charges)
+            self._p_radicals.update(other._p_radicals)
+            self._neighbors.update(other._neighbors)
+            self._hybridizations.update(other._hybridizations)
+            self._p_neighbors.update(other._p_neighbors)
+            self._p_hybridizations.update(other._p_hybridizations)
+            self._plane.update(other._plane)
+            u = self
+        return u
 
     def get_mapping(self, other: Union['QueryCGRContainer', 'cgr.CGRContainer'], **kwargs):
         if isinstance(other, (QueryCGRContainer, cgr.CGRContainer)):
@@ -248,7 +262,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
     def __getstate__(self):
         return {'p_charges': self._p_charges, 'p_radicals': self._p_radicals, 'neighbors': self._neighbors,
                 'hybridizations': self._hybridizations, 'p_neighbors': self._p_neighbors,
-                'p_hybridizations': self._p_hybridizations, **super().__getstate__()}
+                'p_hybridizations': self._p_hybridizations, 'plane': self._plane, **super().__getstate__()}
 
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -258,6 +272,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         self._p_hybridizations = state['p_hybridizations']
         self._p_charges = state['p_charges']
         self._p_radicals = state['p_radicals']
+        self._plane = state.get('plane', {})
 
 
 __all__ = ['QueryCGRContainer']

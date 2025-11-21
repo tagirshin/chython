@@ -50,15 +50,14 @@ __all__.extend(k for k in globals() if k.startswith('Period'))
 __all__.extend(elements)
 
 
-# Removed dynamic class generation loops for Dynamic<Element> and Query<Element>
-# for k, v in elements.items():
-#     name = f'Dynamic{k}'
-#     globals()[name] = cls = type(name, (DynamicElement,),
-#                                  {'__module__': v.__module__, '__slots__': (),
-#                                   'atomic_number': v.atomic_number})
-#     setattr(modules[v.__module__], name, cls)
-#     modules[v.__module__].__all__.append(name)
-#     __all__.append(name)
+for k, v in elements.items():
+    name = f'Dynamic{k}'
+    globals()[name] = cls = type(name, (DynamicElement,),
+                                 {'__module__': v.__module__, '__slots__': (),
+                                  'atomic_number': v.atomic_number})
+    setattr(modules[v.__module__], name, cls)
+    modules[v.__module__].__all__.append(name)
+    __all__.append(name)
 
 for k, v in elements.items():
     name = f'Query{k}'

@@ -148,14 +148,24 @@ class Calculate2DCGR(Calculate2D):
         return ''.join(smiles), order
 
 
+ctx = None
+
 try:
     from py_mini_racer import MiniRacer, JSEvalException
+except (ImportError, RuntimeError):
+    try:
+        from mini_racer import MiniRacer, JSEvalException
+    except (ImportError, RuntimeError):
+        MiniRacer = None
+        JSEvalException = Exception
 
-    ctx = MiniRacer()
-    ctx.eval('const self = this')
-    ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
-except RuntimeError:
-    ctx = None
+if MiniRacer is not None:
+    try:
+        ctx = MiniRacer()
+        ctx.eval('const self = this')
+        ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
+    except RuntimeError:
+        ctx = None
 
 
 __all__ = ['Calculate2DMolecule', 'Calculate2DReaction', 'Calculate2DCGR', 'Calculate2DQuery']
