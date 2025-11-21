@@ -160,7 +160,7 @@ class Smiles(ABC):
     def _smiles(self: Union['Graph', 'Smiles'], weights, *, asymmetric_closures=False,
                 open_parenthesis='(', close_parenthesis=')', delimiter='.', _return_order=False, **kwargs):
         if not self._atoms:
-            return []
+            return ([], []) if _return_order else []
         bonds = self._bonds
         atoms_set = set(self._atoms)
         seen = {}
