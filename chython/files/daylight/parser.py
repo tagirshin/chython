@@ -40,6 +40,7 @@ def parser(tokens, strong_cycle):
     stereo_atoms = {}
     stereo_bonds = defaultdict(dict)
     previous = None
+    cgr = []
 
     for token_type, token in tokens:
         if token_type == 2:  # ((((((
@@ -76,6 +77,10 @@ def parser(tokens, strong_cycle):
                         if bt == 9:  # closure open is \/ bonded
                             stereo_bonds[a][last_num] = b
                             b = 1
+                        elif bt == 13:
+                            bonds.append((last_num, a, 8))
+                            cgr.append(((last_num, a), 'bond', b))
+                            b = None  # drop bond
                         elif strong_cycle:
                             raise IncorrectSmiles('not equal cycle bonds')
                         else:
@@ -94,6 +99,16 @@ def parser(tokens, strong_cycle):
                             if b != 1:
                                 raise IncorrectSmiles('not equal cycle bonds')
                             stereo_bonds[a][last_num] = ob
+                        elif bt == 13:
+                            if obt == 13 and b != ob:
+                                raise IncorrectSmiles('not equal cycle bonds')
+                            bonds.append((last_num, a, 8))
+                            cgr.append(((last_num, a), 'bond', b))
+                            b = None  # drop bond
+                        elif obt == 13:
+                            bonds.append((last_num, a, 8))
+                            cgr.append(((last_num, a), 'bond', ob))
+                            b = None  # drop bond
                         elif b != ob:
                             raise IncorrectSmiles('not equal cycle bonds')
                         previous = None
@@ -102,6 +117,10 @@ def parser(tokens, strong_cycle):
                     if bt == 9:  # stereo \/
                         stereo_bonds[last_num][a] = b
                         b = 1
+                    elif bt == 13:
+                        bonds.append((last_num, a, 8))
+                        cgr.append(((last_num, a), 'bond', b))
+                        b = None  # drop bond
                     elif strong_cycle:
                         raise IncorrectSmiles('not equal cycle bonds')
                     else:
@@ -110,7 +129,8 @@ def parser(tokens, strong_cycle):
                 else:
                     b = 4 if atoms_types[last_num] == atoms_types[a] == 8 else 1
 
-                bonds.append((last_num, a, b))
+                if b:
+                    bonds.append((last_num, a, b))
                 order[a][ind] = last_num
                 order[last_num].append(a)
                 del cycles[token]
@@ -133,8 +153,14 @@ def parser(tokens, strong_cycle):
                         bonds.append((atom_num, last_num, b))
                         order[last_num].append(atom_num)
                         order[atom_num].append(last_num)
+                    elif bt == 13:
+                        bonds.append((atom_num, last_num, 8))
+                        cgr.append(((atom_num, last_num), 'bond', b))
                     # else bt == 4 - skip dot
                     previous = None
+
+            if token_type == 11:
+                cgr.extend((atom_num, *x) for x in token.pop('cgr'))
 
             if token.get('stereo') is not None:
                 stereo_atoms[atom_num] = token.pop('stereo')
@@ -150,8 +176,11 @@ def parser(tokens, strong_cycle):
     elif previous:
         raise IncorrectSmiles('bond on the end')
 
-    return {'atoms': atoms, 'bonds': bonds, 'order': order, 'stereo_atoms': stereo_atoms,
-            'stereo_bonds': stereo_bonds, 'log': log}
+    mol = {'atoms': atoms, 'bonds': bonds, 'order': order, 'stereo_atoms': stereo_atoms,
+           'stereo_bonds': stereo_bonds, 'log': log}
+    if cgr:
+        mol['cgr'] = cgr
+    return mol
 
 
 __all__ = ['parser']

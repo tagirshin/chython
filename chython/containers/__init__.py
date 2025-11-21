@@ -22,6 +22,7 @@ from .bonds import *
 from .cgr import *
 from .molecule import *
 from .query import *
+from .cgr_query import *
 from .reaction import *
 
 

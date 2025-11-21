@@ -27,18 +27,27 @@ from ...periodictable.base.vector import Vector
 if TYPE_CHECKING:
     from chython import MoleculeContainer
 
+ctx = None
+
 try:
     from py_mini_racer import MiniRacer
+except (ImportError, RuntimeError):
+    try:
+        from mini_racer import MiniRacer
+    except (ImportError, RuntimeError):
+        MiniRacer = None
+
+if MiniRacer is not None:
     try:
         from importlib.resources import files
     except ImportError:  # python3.8
         from importlib_resources import files
-
-    ctx = MiniRacer()
-    ctx.eval('const self = this')
-    ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
-except (ImportError, RuntimeError):
-    ctx = None
+    try:
+        ctx = MiniRacer()
+        ctx.eval('const self = this')
+        ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
+    except RuntimeError:
+        ctx = None
 
 
 class Calculate2DMolecule:

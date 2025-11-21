@@ -112,3 +112,14 @@ class InvalidMolBlock(ValueError):
     """
     Invalid MDL MOL
     """
+
+class IsConnectedAtom(Exception):
+    """
+    atom already attached to graph
+    """
+
+
+class IsNotConnectedAtom(Exception):
+    """
+    atom already attached to graph
+    """
