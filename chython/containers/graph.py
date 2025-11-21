@@ -232,15 +232,24 @@ class Graph(Generic[Atom, Bond], ABC):
     def __getstate__(self):
         """Return state as a dictionary for pickling."""
         state = {}
-        # Store attributes from __slots__
-        for slot in self.__slots__:
-            if hasattr(self, slot):
-                state[slot] = getattr(self, slot)
+        # walk MRO to gather all slots (base + subclass) excluding __dict__/__weakref__
+        for cls in self.__class__.mro():
+            for slot in getattr(cls, '__slots__', ()):
+                if slot in ('__dict__', '__weakref__'):
+                    continue
+                if hasattr(self, slot):
+                    state[slot] = getattr(self, slot)
+        # include dict-backed attributes if present
+        if hasattr(self, '__dict__'):
+            state.update(self.__dict__)
         return state
 
     def __setstate__(self, state):
         """Restore state from dictionary."""
         for slot, value in state.items():
+            # avoid overwriting __dict__ or __weakref__
+            if slot in ('__dict__', '__weakref__'):
+                continue
             setattr(self, slot, value)
         # Fallback for legacy states missing core slots
         if not hasattr(self, '_atoms'):
