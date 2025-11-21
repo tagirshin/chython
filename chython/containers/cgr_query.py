@@ -10,7 +10,7 @@ from ..periodictable import (Element, DynamicElement, QueryElement, DynamicQuery
 
 
 class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
-    __slots__ = ('_p_charges', '_p_radicals', '_neighbors', '_hybridizations', '_p_neighbors', '_p_hybridizations', '_plane')
+    __slots__ = ('_p_charges', '_p_radicals', '_neighbors', '_hybridizations', '_p_neighbors', '_p_hybridizations', '_plane', '_charges', '_radicals')
 
     def __init__(self):
         self._p_charges: Dict[int, int] = {}
@@ -20,6 +20,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         self._p_neighbors: Dict[int, Tuple[int, ...]] = {}
         self._p_hybridizations: Dict[int, Tuple[int, ...]] = {}
         self._plane: Dict[int, Tuple[float, float]] = {}
+        self._charges: Dict[int, int] = {}
+        self._radicals: Dict[int, bool] = {}
         super().__init__()
 
     def _validate_charge(self, charge: int) -> int:
@@ -62,8 +64,11 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 raise TypeError('QueryElement object expected')
 
         _map = super().add_atom(atom, *args, **kwargs)
+        atom._attach_to_graph(self, _map)
         if xy_coord is not None:
             self._plane[_map] = xy_coord
+        self._charges[_map] = getattr(atom, '_charge', 0)
+        self._radicals[_map] = getattr(atom, '_is_radical', False)
         self._p_charges[_map] = p_charge
         self._p_radicals[_map] = p_is_radical
         self._neighbors[_map] = neighbors
@@ -81,6 +86,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
 
     def delete_atom(self, n):
         super().delete_atom(n)
+        self._charges.pop(n, None)
+        self._radicals.pop(n, None)
         del self._p_charges[n]
         del self._p_radicals[n]
         del self._neighbors[n]
@@ -98,8 +105,9 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         sh = self._hybridizations
         spn = self._p_neighbors
         sph = self._p_hybridizations
-
         if copy:
+            hch = getattr(h, '_charges', {})
+            hrd = getattr(h, '_radicals', {})
             hpc = h._p_charges
             hpr = h._p_radicals
             hn = h._neighbors
@@ -107,6 +115,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
             hpn = h._p_neighbors
             hph = h._p_hybridizations
         else:
+            hch = {}
+            hrd = {}
             hpc = {}
             hpr = {}
             hn = {}
@@ -116,6 +126,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
 
         for n, c in self._p_charges.items():
             m = mg(n, n)
+            hch[m] = self._charges.get(n, 0)
+            hrd[m] = self._radicals.get(n, False)
             hpc[m] = c
             hpr[m] = spr[n]
             hn[m] = sn[n]
@@ -126,6 +138,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         if copy:
             return h
 
+        self._charges = hch
+        self._radicals = hrd
         self._p_charges = hpc
         self._p_radicals = hpr
         self._neighbors = hn
@@ -143,6 +157,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         copy._p_radicals = self._p_radicals.copy()
         copy._p_charges = self._p_charges.copy()
         copy._plane = self._plane.copy()
+        copy._charges = self._charges.copy()
+        copy._radicals = self._radicals.copy()
         return copy
 
     def substructure(self, atoms, **kwargs) -> 'QueryCGRContainer':
@@ -175,6 +191,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         u = super().union(other, remap=remap, copy=copy)
         if copy:
             # when copy, super().union already returned new instance (u)
+            u._charges = {**self._charges, **other._charges}
+            u._radicals = {**self._radicals, **other._radicals}
             u._p_charges = {**self._p_charges, **other._p_charges}
             u._p_radicals = {**self._p_radicals, **other._p_radicals}
             u._neighbors = {**self._neighbors, **other._neighbors}
@@ -183,6 +201,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
             u._p_hybridizations = {**self._p_hybridizations, **other._p_hybridizations}
             u._plane = {**self._plane, **other._plane}
         else:
+            self._charges.update(other._charges)
+            self._radicals.update(other._radicals)
             self._p_charges.update(other._p_charges)
             self._p_radicals.update(other._p_radicals)
             self._neighbors.update(other._neighbors)
@@ -260,12 +280,20 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         return hybridization, p_hybridization
 
     def __getstate__(self):
-        return {'p_charges': self._p_charges, 'p_radicals': self._p_radicals, 'neighbors': self._neighbors,
+        atomic_numbers = {n: getattr(a, '_atomic_number', getattr(a, 'atomic_number', 0)) for n, a in self._atoms.items()}
+        isotopes = {n: getattr(a, '_isotope', getattr(a, 'isotope', None)) for n, a in self._atoms.items()}
+        return {'_atoms': self._atoms, '_bonds': self._bonds, '_charges': self._charges, '_radicals': self._radicals,
+                'p_charges': self._p_charges, 'p_radicals': self._p_radicals, 'neighbors': self._neighbors,
                 'hybridizations': self._hybridizations, 'p_neighbors': self._p_neighbors,
-                'p_hybridizations': self._p_hybridizations, 'plane': self._plane, **super().__getstate__()}
+                'p_hybridizations': self._p_hybridizations, 'plane': self._plane,
+                'atomic_numbers': atomic_numbers, 'isotopes': isotopes, **super().__getstate__()}
 
     def __setstate__(self, state):
         super().__setstate__(state)
+        self._atoms = state['_atoms']
+        self._bonds = state['_bonds']
+        self._charges = state.get('_charges', {})
+        self._radicals = state.get('_radicals', {})
         self._neighbors = state['neighbors']
         self._hybridizations = state['hybridizations']
         self._p_neighbors = state['p_neighbors']
@@ -273,6 +301,22 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         self._p_charges = state['p_charges']
         self._p_radicals = state['p_radicals']
         self._plane = state.get('plane', {})
+        atomic_numbers = state.get('atomic_numbers', {})
+        isotopes = state.get('isotopes', {})
+        for n, atom in self._atoms.items():
+            try:
+                atom._atomic_number = atomic_numbers.get(n, getattr(atom, '_atomic_number', 0))
+                atom._isotope = isotopes.get(n, getattr(atom, '_isotope', None))
+                atom._attach_to_graph(self, n)
+            except Exception:
+                pass
+
+    @property
+    def atoms_order(self) -> Dict[int, int]:
+        """
+        Lightweight order mapping for SMILES generation when Morgan is absent.
+        """
+        return {n: i for i, n in enumerate(self._atoms, 1)}
 
 
 __all__ = ['QueryCGRContainer']

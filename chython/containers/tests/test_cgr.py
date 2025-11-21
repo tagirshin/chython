@@ -314,5 +314,29 @@ class TestCGRBehavior(unittest.TestCase):
         self.assertEqual(dyn_from_elem.charge, elem.charge)
         self.assertEqual(dyn_from_elem.p_charge, elem.charge)
 
+    def test_query_cgr_smiles_non_empty_with_dynamic_tokens(self):
+        rxn = smiles('[CH3:1][CH2:2][OH:3]>>[CH3:1][CH3:2].[OH2:3]')
+        cgr = ~rxn
+        q = cgr.substructure([1, 2], as_query=True)
+
+        q_smiles = str(q)
+        self.assertTrue(q_smiles)
+        # Query CGR SMILES should contain dynamic product markers '>'
+        self.assertIn('>', q_smiles)
+        # Ensure atom bracket notation is present
+        self.assertIn('[', q_smiles)
+
+    def test_query_cgr_pickle_roundtrip(self):
+        rxn = smiles('[CH3:1][CH2:2][OH:3]>>[CH3:1][CH3:2].[OH2:3]')
+        cgr = ~rxn
+        q = cgr.substructure([1, 2], as_query=True)
+
+        pickled_q = pickle.dumps(q)
+        unpickled_q = pickle.loads(pickled_q)
+
+        self.assertIsInstance(unpickled_q, QueryCGRContainer)
+        self.assertEqual(len(q), len(unpickled_q))
+        self.assertEqual(str(q), str(unpickled_q))
+
 if __name__ == '__main__':
     unittest.main() 

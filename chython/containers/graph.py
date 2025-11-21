@@ -27,7 +27,7 @@ Bond = TypeVar('Bond')
 
 
 class Graph(Generic[Atom, Bond], ABC):
-    __slots__ = ('_atoms', '_bonds', '__dict__')
+    __slots__ = ('_atoms', '_bonds', '__dict__', '__weakref__')
     __class_cache__ = {}
 
     _atoms: Dict[int, Atom]
@@ -242,6 +242,11 @@ class Graph(Generic[Atom, Bond], ABC):
         """Restore state from dictionary."""
         for slot, value in state.items():
             setattr(self, slot, value)
+        # Fallback for legacy states missing core slots
+        if not hasattr(self, '_atoms'):
+            self._atoms = {}
+        if not hasattr(self, '_bonds'):
+            self._bonds = {}
 
 
 __all__ = ['Graph']

@@ -679,14 +679,14 @@ class QueryCGRSmiles(Smiles):
 
     def _format_atom(self, n, adjacency, **kwargs):
         atom = self._atoms[n]
-        charge = atom.charge
-        hybridization = self._hybridizations[n]
-        neighbors = self._neighbors[n]
-        is_radical = atom.is_radical
-        p_charge = self._p_charges[n]
-        p_hybridization = self._p_hybridizations[n]
-        p_neighbors = self._p_neighbors[n]
-        p_is_radical = self._p_radicals[n]
+        charge = getattr(self, '_charges', {}).get(n, getattr(atom, 'charge', 0))
+        hybridization = self._hybridizations.get(n, ())
+        neighbors = self._neighbors.get(n, ())
+        is_radical = getattr(self, '_radicals', {}).get(n, getattr(atom, 'is_radical', False))
+        p_charge = self._p_charges.get(n, 0)
+        p_hybridization = self._p_hybridizations.get(n, ())
+        p_neighbors = self._p_neighbors.get(n, ())
+        p_is_radical = self._p_radicals.get(n, False)
 
         if atom.isotope:
             smi = ['[', str(atom.isotope), atom.atomic_symbol]
