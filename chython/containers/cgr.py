@@ -614,5 +614,10 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
         center.update(n for n, m_bond in self._bonds.items() if any(bond.is_dynamic for bond in m_bond.values()))
         return tuple(center)
 
+    @cached_property
+    def center_bonds(self) -> Tuple[Tuple[int, int], ...]:
+        """ Get list of bonds of reaction center (bonds with dynamic orders).
+        """
+        return tuple((n, m) for n, m, bond in self.bonds() if bond.is_dynamic)
 
 __all__ = ['CGRContainer']
