@@ -1059,7 +1059,7 @@ class Depict:
 
         dash1, dash2 = config['dashes']
         dash3, dash4 = config['aromatic_dashes']
-        aromatic_space = config['cgr_aromatic_space']
+        aromatic_space = config['aromatic_space']
         # n aligned xy
         mn_x, mn_y, cn_x, cn_y = m_x - n_x, m_y - n_y, c_x - n_x, c_y - n_y
 
@@ -1102,8 +1102,10 @@ class Depict:
         other_size = config['other_size']
         monochrome = config['monochrome']
         atoms_colors = config['atoms_colors']
+        dx_m, dy_m = config['dx_m'], config['dy_m']
         dx_ci, dy_ci = config['dx_ci'], config['dy_ci']
         symbols_font_style = config['symbols_font_style']
+        font2 = .2 * font_size
         font4 = .4 * font_size
         font6 = .6 * font_size
         font7 = .7 * font_size
@@ -1177,7 +1179,7 @@ class Depict:
                     else:
                         dx = font4
                         dx_mm = dx_m + font2
-                    fill_zone.append(f'          <circle cx="{x:.2f}" cy="{y:.2f}" r="{font4:.2f}"/>')
+                    mask['center'].append(f'          <circle cx="{x:.2f}" cy="{y:.2f}" r="{font4:.2f}"/>')
                 svg.append(f'        <text x="{x:.2f}" y="{y:.2f}" dx="-{dx:.2f}" dy="{font4:.2f}" '
                            f'font-size="{font_size:.2f}">{symbol}</text>')
                 mask['symbols'].append(f'           <text x="{x:.2f}" y="{y:.2f}" dx="-{dx:.2f}" '

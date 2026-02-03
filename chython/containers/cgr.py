@@ -403,7 +403,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             or_ = {n: a.is_radical for n, a in oa.items()}
             op = {n: getattr(a, 'xy', (0.0, 0.0)) for n, a in oa.items()}
             ob = other._bonds
-            common = sa.keys() & other
+            common = sa.keys() & oa.keys()
 
             for n in sa.keys() - common:
                 h.add_atom(sa[n].copy(), n, charge=sa[n].charge, is_radical=sa[n].is_radical, xy=sp[n], p_charge=spc.get(n, 0), p_is_radical=spr.get(n, False))
@@ -413,7 +413,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                             order = bond.order
                             if order:
                                 bond = object.__new__(DynamicBond)
-                                bond._DynamicBond__order, bond._DynamicBond__p_order = order, None
+                                bond._order, bond._p_order = order, None
                                 bonds.append((n, m, bond))
                         else:
                             bonds.append((n, m, bond))
@@ -424,7 +424,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                         if m in common:
                             order = bond.order
                             bond = object.__new__(DynamicBond)
-                            bond._DynamicBond__order, bond._DynamicBond__p_order = None, order
+                            bond._order, bond._p_order = None, order
                         bonds.append((n, m, bond))
             for n in common:
                 an = adj[n]
@@ -442,7 +442,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                 for m, (o1, o2) in adj[n].items():
                     if m not in atoms:
                         bond = object.__new__(DynamicBond)
-                        bond._DynamicBond__order, bond._DynamicBond__p_order = o1, o2
+                        bond._order, bond._p_order = o1, o2
                         bonds.append((n, m, bond))
         elif isinstance(other, CGRContainer):
             oa = other._atoms
@@ -452,7 +452,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             opr = other._p_radicals
             op = other._plane
             ob = other._bonds
-            common = sa.keys() & other
+            common = sa.keys() & oa.keys()
 
             for n in sa.keys() - common:
                 h.add_atom(sa[n].copy(), n, charge=sa[n].charge, is_radical=sa[n].is_radical, xy=sp[n], p_charge=spc.get(n, 0), p_is_radical=spr.get(n, False))
@@ -462,7 +462,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                             order = bond.order
                             if order:
                                 bond = object.__new__(DynamicBond)
-                                bond._DynamicBond__order, bond._DynamicBond__p_order = order, None
+                                bond._order, bond._p_order = order, None
                                 bonds.append((n, m, bond))
                         else:
                             bonds.append((n, m, bond))
@@ -475,7 +475,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                             order = bond.p_order
                             if order:
                                 bond = object.__new__(DynamicBond)
-                                bond._DynamicBond__order, bond._DynamicBond__p_order = None, order
+                                bond._order, bond._p_order = None, order
                                 bonds.append((n, m, bond))
                         else:
                             bonds.append((n, m, bond))
@@ -495,7 +495,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
                 for m, (o1, o2) in adj[n].items():
                     if m not in atoms:
                         bond = object.__new__(DynamicBond)
-                        bond._DynamicBond__order, bond._DynamicBond__p_order = o1, o2
+                        bond._order, bond._p_order = o1, o2
                         bonds.append((n, m, bond))
         else:
             raise TypeError('MoleculeContainer or CGRContainer expected')
