@@ -88,7 +88,7 @@ class Calculate2D:
 
         if isinstance(self, molecule.MoleculeContainer):
             if -.18 <= plane[right_atom][1] <= .18:
-                factor = self._hydrogens[right_atom]
+                factor = self._atoms[right_atom].implicit_hydrogens
                 if factor == 1:
                     max_x += .15
                 elif factor:
@@ -111,7 +111,7 @@ class Calculate2D:
 
         if isinstance(self, molecule.MoleculeContainer):
             if shift_y - .18 <= plane[right_atom][1] <= shift_y + .18:
-                factor = self._hydrogens[right_atom]
+                factor = self._atoms[right_atom].implicit_hydrogens
                 if factor == 1:
                     max_x += .15
                 elif factor:
@@ -130,7 +130,8 @@ class Calculate2DQuery(Calculate2D):
             mol.add_atom(atom, n)
         for n, m, bond in self.bonds():
             mol.add_bond(n, m, bond.order[0])
-        mol._hydrogens = {n: 0 for n in mol._hydrogens}
+        for n in mol._atoms:
+            mol._atoms[n]._implicit_hydrogens = 0
         smiles, order = mol._smiles(lambda x: random(), _return_order=True)
         return ''.join(smiles), order
 
@@ -146,7 +147,8 @@ class Calculate2DCGR(Calculate2D):
             mol.add_atom(atom, n)
         for n, m, bond in self.bonds():
             mol.add_bond(n, m, bond.order or 1)
-        mol._hydrogens = {n: 0 for n in mol._hydrogens}
+        for n in mol._atoms:
+            mol._atoms[n]._implicit_hydrogens = 0
         smiles, order = mol._smiles(lambda x: random(), _return_order=True)
         return ''.join(smiles), order
 
