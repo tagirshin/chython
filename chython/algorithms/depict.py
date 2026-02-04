@@ -102,6 +102,9 @@ def _rotate_vector(x1, y1, x2, y2):
     return cos_rad * x1 - sin_rad * y1, sin_rad * x1 + cos_rad * y1
 
 
+rotate_vector = _rotate_vector
+
+
 def _graph_svg(atoms, bonds, define, masks, uid, viewbox_x, viewbox_y, width, height):
     svg = [f'  <g id="{uid}-molecule">\n    <defs>']
     svg.extend(define)

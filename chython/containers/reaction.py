@@ -152,6 +152,28 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         copy._signs = self._signs
         return copy
 
+    @classmethod
+    def from_cgr(cls, cgr: 'CGRContainer') -> 'ReactionContainer':
+        """
+        Decompose CGR into reaction
+
+        :param cgr: CGRContainer to decompose
+        :return: ReactionContainer with separate reactant and product molecules
+        """
+        if not isinstance(cgr, CGRContainer):
+            raise TypeError('CGR expected')
+        r, p = cgr.decompose()
+        reaction = object.__new__(cls)
+        reaction._reactants = tuple(r.split())
+        reaction._products = tuple(p.split())
+        reaction._reagents = ()
+        reaction._graph_cls = MoleculeContainer
+        reaction._meta = None
+        reaction._name = None
+        reaction._arrow = None
+        reaction._signs = None
+        return reaction
+
     def compose(self, *, dynamic=True) -> CGRContainer:
         """
         Get CGR of reaction

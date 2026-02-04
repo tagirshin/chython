@@ -123,7 +123,8 @@ class Calculate2DQuery(Calculate2D):
     __slots__ = ()
 
     def _clean2d_prepare(self):
-        mol = molecule.MoleculeContainer()
+        from ...containers.molecule import MoleculeContainer
+        mol = MoleculeContainer()
         for n, atom in self._atoms.items():
             atom = Element.from_atomic_number(atom.atomic_number or 6)()
             mol.add_atom(atom, n)
@@ -138,7 +139,8 @@ class Calculate2DCGR(Calculate2D):
     __slots__ = ()
 
     def _clean2d_prepare(self):
-        mol = molecule.MoleculeContainer()
+        from ...containers.molecule import MoleculeContainer
+        mol = MoleculeContainer()
         for n, atom in self._atoms.items():
             atom = Element.from_atomic_number(atom.atomic_number or 6)()
             mol.add_atom(atom, n)

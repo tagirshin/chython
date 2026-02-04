@@ -535,9 +535,12 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
         products = molecule.MoleculeContainer()
 
         for n, atom_obj in self._atoms.items():
-            atom_template = Element.from_atomic_number(atom_obj.atomic_number)(atom_obj.isotope)
+            try:
+                atom_template = Element.from_atomic_number(atom_obj.atomic_number)(atom_obj.isotope)
+            except (ValueError, TypeError):
+                atom_template = Element.from_atomic_number(atom_obj.atomic_number)()
             # Safely get coordinates, defaulting to (0.0, 0.0) if not found
-            xy_coords = plane.get(n, (0.0, 0.0)) 
+            xy_coords = plane.get(n, (0.0, 0.0))
             reactants.add_atom(atom_template, n, charge=atom_obj.charge, is_radical=atom_obj.is_radical, xy=xy_coords)
             products.add_atom(atom_template.copy(), n, charge=p_charges[n], is_radical=p_radicals[n], xy=xy_coords)
 

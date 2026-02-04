@@ -454,6 +454,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in self._atoms.keys() - common:  # cleavage atoms
             ha[n] = from_atom(self._atoms[n])
             hb[n] = {}
+            if dynamic:
+                h._plane[n] = tuple(self._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
             for m, bond in self._bonds[n].items():
                 if m not in ha:
                     if m in common:  # bond to common atoms is broken bond
@@ -464,7 +472,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in other._atoms.keys() - common:  # coupling atoms
             ha[n] = from_atom(other._atoms[n])
             hb[n] = {}
-
+            if dynamic:
+                h._plane[n] = tuple(other._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
             for m, bond in other._bonds[n].items():
                 if m not in ha:
                     if m in common:  # bond to common atoms is formed bond
@@ -483,6 +498,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in common:
             ha[n] = from_atoms(self._atoms[n], other._atoms[n])
             hb[n] = {}
+            if dynamic:
+                h._plane[n] = tuple(self._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
 
             for m, (o1, o2) in adj[n].items():
                 if m not in ha:

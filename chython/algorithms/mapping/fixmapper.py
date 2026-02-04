@@ -44,7 +44,7 @@ class FixMapper:
             if logging:
                 return []
             return False
-        del self.__dict__['__cached_method_compose']
+        self.__dict__.pop('__cached_method___invert__', None)
 
         log = []
         free_number = count(max(cgr) + 1)
