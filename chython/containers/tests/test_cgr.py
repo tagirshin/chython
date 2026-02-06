@@ -347,5 +347,86 @@ class TestCGRBehavior(unittest.TestCase):
         self.assertEqual(len(q), len(unpickled_q))
         self.assertEqual(str(q), str(unpickled_q))
 
+class TestCGRCenterEdgeCases(unittest.TestCase):
+    """Edge case tests for center_atoms, center_bonds, and centers_list."""
+
+    def test_no_dynamic_bonds_charge_only(self):
+        """Center atom with dynamic charge but no dynamic bonds."""
+        cgr = CGRContainer()
+        c1 = DynamicElement.from_atomic_number(6)(0)
+        c2 = DynamicElement.from_atomic_number(6)(0)
+        cgr.add_atom(c1, 1, p_charge=1)  # charge changes: 0 -> 1
+        cgr.add_atom(c2, 2)
+        cgr.add_bond(1, 2, DynamicBond(1, 1))  # static bond
+
+        self.assertIn(1, cgr.center_atoms)
+        self.assertNotIn(2, cgr.center_atoms)
+        # center_bonds should be empty (no dynamic bonds)
+        self.assertEqual(len(cgr.center_bonds), 0)
+        # centers_list should have one group with just atom 1
+        self.assertEqual(len(cgr.centers_list), 1)
+        self.assertEqual(set(cgr.centers_list[0]), {1})
+
+    def test_multiple_disconnected_centers(self):
+        """Two separate reaction centers in the same CGR."""
+        cgr = CGRContainer()
+        for i in range(1, 5):
+            cgr.add_atom(DynamicElement.from_atomic_number(6)(0), i)
+        cgr.add_bond(1, 2, DynamicBond(1, 2))  # center 1: bond 1-2
+        cgr.add_bond(3, 4, DynamicBond(2, 1))  # center 2: bond 3-4
+        # no bond between the two centers
+
+        self.assertEqual(set(cgr.center_atoms), {1, 2, 3, 4})
+        self.assertEqual(len(cgr.center_bonds), 2)
+        centers = cgr.centers_list
+        self.assertEqual(len(centers), 2)
+        center_sets = {frozenset(c) for c in centers}
+        self.assertEqual(center_sets, {frozenset({1, 2}), frozenset({3, 4})})
+
+    def test_no_changes_empty_centers(self):
+        """CGR with no dynamic features — no center atoms or bonds."""
+        cgr = CGRContainer()
+        c1 = DynamicElement.from_atomic_number(6)(0)
+        c2 = DynamicElement.from_atomic_number(6)(0)
+        cgr.add_atom(c1, 1)
+        cgr.add_atom(c2, 2)
+        cgr.add_bond(1, 2, DynamicBond(1, 1))  # static bond
+
+        self.assertEqual(len(cgr.center_atoms), 0)
+        self.assertEqual(len(cgr.center_bonds), 0)
+        self.assertEqual(len(cgr.centers_list), 0)
+
+    def test_center_bonds_only_dynamic(self):
+        """center_bonds must only include dynamic bonds, not static bonds touching center atoms."""
+        rxn = smiles('[CH3:1][C:2](=[O:3])[OH:4].[OH:5][CH3:6]>>[CH3:1][C:2](=[O:3])[O:5][CH3:6].[OH2:4]')
+        cgr = ~rxn
+        # all center_bonds must be dynamic
+        for n, m in cgr.center_bonds:
+            bond = cgr.bond(n, m)
+            self.assertTrue(bond.is_dynamic,
+                            f'Bond ({n}, {m}) in center_bonds is not dynamic: '
+                            f'order={bond.order}, p_order={bond.p_order}')
+
+    def test_single_atom_dynamic_charge(self):
+        """Single atom CGR with only a charge change."""
+        cgr = CGRContainer()
+        cgr.add_atom(DynamicElement.from_atomic_number(6)(0), 1, p_charge=1)
+
+        self.assertEqual(set(cgr.center_atoms), {1})
+        self.assertEqual(len(cgr.center_bonds), 0)
+        self.assertEqual(len(cgr.centers_list), 1)
+        self.assertEqual(cgr.centers_list[0], (1,))
+
+    def test_centers_list_matches_center_atoms(self):
+        """All center_atoms must appear in exactly one centers_list group."""
+        rxn = smiles('[CH2:5]=[CH2:6].[CH:2]([CH:3]=[CH2:4])=[CH2:1]>>'
+                     '[CH:3]1=[CH:4][CH2:6][CH2:5][CH2:2][CH2:1]1')
+        cgr = ~rxn
+        all_from_centers = set()
+        for group in cgr.centers_list:
+            all_from_centers.update(group)
+        self.assertEqual(all_from_centers, set(cgr.center_atoms))
+
+
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()

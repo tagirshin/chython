@@ -613,39 +613,31 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
     def center_atoms(self) -> Tuple[int, ...]:
         """ Get list of atoms of reaction center (atoms with dynamic: bonds, charges, radicals).
         """
-        center = {n for n, a in self._atoms.items() if a.is_dynamic}
+        charges = self._charges
+        p_charges = self._p_charges
+        radicals = self._radicals
+        p_radicals = self._p_radicals
+        center = {n for n in self._atoms
+                  if charges.get(n, 0) != p_charges.get(n, 0)
+                  or radicals.get(n, False) != p_radicals.get(n, False)}
         center.update(n for n, m_bond in self._bonds.items() if any(bond.is_dynamic for bond in m_bond.values()))
         return tuple(center)
 
     @cached_property
     def center_bonds(self) -> Tuple[Tuple[int, int], ...]:
-        """Get list of bonds of reaction center (bonds with dynamic orders or touching center atoms)."""
-        center_atoms = set(self.center_atoms)
-        bonds = []
-        for n, m, bond in self.bonds():
-            if bond.is_dynamic or n in center_atoms or m in center_atoms:
-                bonds.append((n, m))
-        return tuple(bonds)
+        """Get list of bonds of reaction center (bonds with dynamic orders)."""
+        return tuple((n, m) for n, m, bond in self.bonds() if bond.is_dynamic)
 
     @cached_property
     def centers_list(self) -> Tuple[Tuple[int, ...], ...]:
         """Get a list of atom groups for each reaction center component."""
-        radicals = self._radicals
-        charges = self._charges
-        p_charges = self._p_charges
-        p_radicals = self._p_radicals
-        center = set()
+        center = set(self.center_atoms)
         adj = defaultdict(set)
-
-        for n, c in charges.items():
-            if c != p_charges.get(n, c) or radicals.get(n, False) != p_radicals.get(n, False):
-                center.add(n)
 
         for n, m_bond in self._bonds.items():
             for m, bond in m_bond.items():
                 if bond.is_dynamic:
                     adj[n].add(m)
-        center.update(adj)
 
         # propagate through aromatic rings if any bond changes inside
         if self.aromatic_rings:
