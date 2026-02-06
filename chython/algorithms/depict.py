@@ -57,7 +57,9 @@ _render_config = {'carbon': False, 'dashes': (.2, .1), 'span_dy': .15, 'mapping'
                   'atoms_colors': cpk, 'triple_space': .13, 'double_space': .06, 'mapping_color': '#0305A7',
                   'aromatic_space': .14, 'aromatic_dashes': (.15, .05), 'dx_m': .05, 'dy_m': .2,
                   'other_font_style': 'monospace', 'dx_ci': .05, 'dy_ci': 0.2, 'symbols_font_style': 'sans-serif',
-                  'mapping_font_style': 'monospace', 'wedge_space': .08, 'arrow_color': 'black'}
+                  'mapping_font_style': 'monospace', 'wedge_space': .08, 'arrow_color': 'black',
+                  'query_color': '#5D8AA8', 'broken_color': 'red', 'formed_color': 'green',
+                  'cgr_aromatic_space': .18, 'dx_nh': .075, 'dy_nh': .15}
 
 loop = browser = None
 
@@ -163,20 +165,31 @@ def _render_aromatic_bond(n_x, n_y, m_x, m_y, c_x, c_y):
                f'stroke-dasharray="{dash3:.2f} {dash4:.2f}"/>'
 
 
-def depict_settings(*, carbon: bool = False, aam: bool = True, monochrome: bool = False,
-                    bond_color: str = 'black', aam_color: str = '#0305A7', atoms_colors: tuple = cpk,
-                    bond_width: float = .04, wedge_space: float = .08, dashes: Tuple[float, float] = (.2, .1),
-                    aromatic_dashes: Tuple[float, float] = (.15, .05), dx_ci: float = .05, dy_ci: float = .2,
-                    dx_m: float = .05, dy_m: float = .2, span_dy: float = .15, double_space: float = .06,
-                    triple_space: float = .13, aromatic_space: float = .14, atom_radius: float = .2, bond_radius=.02,
-                    font_size: float = .5, other_size: float = .3, span_size: float = .35,  aam_size: float = .25,
-                    symbols_font_style: str = 'sans-serif', other_font_style: str = 'monospace',
-                    other_color: str = 'black', arrow_color: str = 'black', mapping_font_style: str = 'monospace'):
+def depict_settings(*, carbon: bool | None = None, aam: bool | None = None, monochrome: bool | None = None,
+                    bond_color: str | None = None, aam_color: str | None = None, atoms_colors: tuple | None = None,
+                    bond_width: float | None = None, wedge_space: float | None = None,
+                    dashes: Tuple[float, float] | None = None,
+                    aromatic_dashes: Tuple[float, float] | None = None,
+                    dx_ci: float | None = None, dy_ci: float | None = None,
+                    dx_m: float | None = None, dy_m: float | None = None,
+                    span_dy: float | None = None, double_space: float | None = None,
+                    triple_space: float | None = None, aromatic_space: float | None = None,
+                    atom_radius: float | None = None, bond_radius: float | None = None,
+                    font_size: float | None = None, other_size: float | None = None,
+                    span_size: float | None = None, aam_size: float | None = None,
+                    symbols_font_style: str | None = None, other_font_style: str | None = None,
+                    other_color: str | None = None, arrow_color: str | None = None,
+                    mapping_font_style: str | None = None,
+                    query_color: str | None = None, broken_color: str | None = None,
+                    formed_color: str | None = None, cgr_aromatic_space: float | None = None,
+                    dx_nh: float | None = None, dy_nh: float | None = None):
     """
-    Settings for depict of chemical structures
+    Settings for depict of chemical structures.
+    Pass parameters as keyword arguments to override current values. Unspecified parameters are left unchanged.
 
     :param carbon: if True, depict atom C
-    :param font_size: font size
+    :param font_size: font size. When changed, font-derived sizes (span_dy, span_size, other_size, mapping_size,
+        dx_m, dy_m, dx_ci, dy_ci, dx_nh, dy_nh) are recalculated proportionally unless explicitly overridden
     :param aam_size: atom-to-atom mapping font size
     :param span_size: font size for hydrogen count
     :param other_size: isotope, radical, charges, neighbors and hybridization symbols size
@@ -204,34 +217,63 @@ def depict_settings(*, carbon: bool = False, aam: bool = True, monochrome: bool 
     :param span_dy: y-axis offset relative to the center of the atom symbol for hydrogen count
     :param mapping_font_style: font style for mapping
     :param wedge_space: wedge bond width
+    :param query_color: color for query atom/bond markers
+    :param broken_color: color for broken bonds in CGR depiction
+    :param formed_color: color for formed bonds in CGR depiction
+    :param cgr_aromatic_space: space between aromatic bonds in CGR depiction
+    :param dx_nh: x-axis offset for NH count display
+    :param dy_nh: y-axis offset for NH count display
     """
-    _render_config['carbon'] = carbon
-    _render_config['dashes'] = dashes
-    _render_config['span_dy'] = span_dy
-    _render_config['mapping'] = aam
-    _render_config['font_size'] = font_size
-    _render_config['span_size'] = span_size
-    _render_config['other_size'] = other_size
-    _render_config['monochrome'] = monochrome
-    _render_config['bond_color'] = bond_color
-    _render_config['bond_width'] = bond_width
-    _render_config['other_color'] = other_color
-    _render_config['arrow_color'] = arrow_color
-    _render_config['bond_radius'] = bond_radius
-    _render_config['atom_radius'] = -atom_radius
-    _render_config['mapping_size'] = aam_size
-    _render_config['atoms_colors'] = atoms_colors
-    _render_config['triple_space'] = triple_space
-    _render_config['double_space'] = double_space
-    _render_config['mapping_color'] = aam_color
-    _render_config['aromatic_space'] = aromatic_space
-    _render_config['aromatic_dashes'] = aromatic_dashes
-    _render_config['dx_m'], _render_config['dy_m'] = dx_m, dy_m
-    _render_config['other_font_style'] = other_font_style
-    _render_config['dx_ci'], _render_config['dy_ci'] = dx_ci, dy_ci
-    _render_config['symbols_font_style'] = symbols_font_style
-    _render_config['mapping_font_style'] = mapping_font_style
-    _render_config['wedge_space'] = wedge_space
+    if carbon is not None: _render_config['carbon'] = carbon
+    if dashes is not None: _render_config['dashes'] = dashes
+    if aam is not None: _render_config['mapping'] = aam
+    if monochrome is not None: _render_config['monochrome'] = monochrome
+    if bond_color is not None: _render_config['bond_color'] = bond_color
+    if bond_width is not None: _render_config['bond_width'] = bond_width
+    if other_color is not None: _render_config['other_color'] = other_color
+    if arrow_color is not None: _render_config['arrow_color'] = arrow_color
+    if bond_radius is not None: _render_config['bond_radius'] = bond_radius
+    if atom_radius is not None: _render_config['atom_radius'] = -atom_radius
+    if atoms_colors is not None: _render_config['atoms_colors'] = atoms_colors
+    if triple_space is not None: _render_config['triple_space'] = triple_space
+    if double_space is not None: _render_config['double_space'] = double_space
+    if aam_color is not None: _render_config['mapping_color'] = aam_color
+    if aromatic_space is not None: _render_config['aromatic_space'] = aromatic_space
+    if aromatic_dashes is not None: _render_config['aromatic_dashes'] = aromatic_dashes
+    if other_font_style is not None: _render_config['other_font_style'] = other_font_style
+    if symbols_font_style is not None: _render_config['symbols_font_style'] = symbols_font_style
+    if mapping_font_style is not None: _render_config['mapping_font_style'] = mapping_font_style
+    if wedge_space is not None: _render_config['wedge_space'] = wedge_space
+    if query_color is not None: _render_config['query_color'] = query_color
+    if broken_color is not None: _render_config['broken_color'] = broken_color
+    if formed_color is not None: _render_config['formed_color'] = formed_color
+    if cgr_aromatic_space is not None: _render_config['cgr_aromatic_space'] = cgr_aromatic_space
+
+    # Handle font_size change: recalculate derived sizes proportionally
+    if font_size is not None:
+        _render_config['font_size'] = font_size
+        if span_dy is None: _render_config['span_dy'] = 0.3 * font_size
+        if span_size is None: _render_config['span_size'] = 0.7 * font_size
+        if other_size is None: _render_config['other_size'] = 0.6 * font_size
+        if aam_size is None: _render_config['mapping_size'] = 0.5 * font_size
+        if dx_m is None: _render_config['dx_m'] = 0.1 * font_size
+        if dy_m is None: _render_config['dy_m'] = 0.4 * font_size
+        if dx_ci is None: _render_config['dx_ci'] = 0.1 * font_size
+        if dy_ci is None: _render_config['dy_ci'] = 0.4 * font_size
+        if dx_nh is None: _render_config['dx_nh'] = 0.15 * font_size
+        if dy_nh is None: _render_config['dy_nh'] = 0.3 * font_size
+
+    # Apply explicit overrides for font-derived values
+    if span_dy is not None: _render_config['span_dy'] = span_dy
+    if span_size is not None: _render_config['span_size'] = span_size
+    if other_size is not None: _render_config['other_size'] = other_size
+    if aam_size is not None: _render_config['mapping_size'] = aam_size
+    if dx_m is not None: _render_config['dx_m'] = dx_m
+    if dy_m is not None: _render_config['dy_m'] = dy_m
+    if dx_ci is not None: _render_config['dx_ci'] = dx_ci
+    if dy_ci is not None: _render_config['dy_ci'] = dy_ci
+    if dx_nh is not None: _render_config['dx_nh'] = dx_nh
+    if dy_nh is not None: _render_config['dy_nh'] = dy_nh
 
 
 class DepictMolecule:
@@ -589,119 +631,9 @@ class DepictReaction:
 class Depict:
     __slots__ = ()
 
-    # Default font size for calculating initial literal values
-    _default_font_size = 0.5
+    _render_config = _render_config
 
-    _render_config = {
-        'carbon': False,
-        'atoms_colors': cpk,
-        'bond_color': 'black',
-        'font_size': _default_font_size,
-        'dashes': (.2, .1),
-        'aromatic_space': .14,
-        'triple_space': .13,
-        'double_space': .06,
-        'mapping': True,
-        'dx_m': 0.1 * _default_font_size,  # Was _font1
-        'mapping_color': '#0305A7',
-        'bond_width': .04,
-        'query_color': '#5D8AA8',  # New
-        'broken_color': 'red',  # New
-        'formed_color': 'green',  # New
-        'aromatic_dashes': (.15, .05),
-        'atom_radius': -.2,
-        'monochrome': False,
-        'mapping_size': 0.5 * _default_font_size,  # New default factor (0.5), original was 0.25 literal
-        'symbols_font_style': 'sans-serif',
-        'other_size': 0.6 * _default_font_size,  # New default factor (0.6), original was 0.3 literal
-        'dy_m': 0.4 * _default_font_size,  # Was _font4
-        'span_dy': 0.3 * _default_font_size,  # Was _font3
-        'span_size': 0.7 * _default_font_size,  # New default factor (0.7), original was 0.35 literal
-        'dx_ci': 0.1 * _default_font_size,  # Was _font1
-        'dy_ci': 0.4 * _default_font_size,  # Was _font4
-        'cgr_aromatic_space': .18,  # New
-        'dx_nh': 0.15 * _default_font_size,  # New, was 0.15 * .5
-        'dy_nh': 0.3 * _default_font_size,  # New, was _font3
-        'other_font_style': 'monospace',
-        'other_color': 'black',
-        'bond_radius': .02,
-        'wedge_space': .08, # from original _render_config
-        'mapping_font_style': 'monospace' # from original _render_config
-    }
-
-    @classmethod
-    def depict_settings(cls, *, carbon: bool | None = None, bond_color: str | None = None, font_size: float | None = None,
-                        aam: bool | None = None, aam_color: str | None = None, bond_width: float | None = None,
-                        dashes: Tuple[float, float] | None = None, query_color: str | None = None, atoms_colors: tuple | None = None,
-                        dx_ci: float | None = None, dy_ci: float | None = None, triple_space: float | None = None,
-                        aromatic_dashes: Tuple[float, float] | None = None, dy_nh: float | None = None,
-                        formed_color: str | None = None, monochrome: bool | None = None,  atom_radius: float | None = None,
-                        dy_m: float | None = None, symbols_font_style: str | None = None, other_size: float | None = None,
-                        double_space: float | None = None, dx_m: float | None = None, span_dy: float | None = None,
-                        span_size: float | None = None, dx_nh: float | None = None, other_font_style: str | None = None,
-                        cgr_aromatic_space: float | None = None, aam_size: float | None = None, other_color: str | None = None,
-                        broken_color: str | None = None, aromatic_space: float | None = None, bond_radius: float | None = None,
-                        wedge_space: float | None = None, mapping_font_style: str | None = None):
-        """
-        Settings for depict of chemical structures.
-        Pass parameters as keyword arguments to override defaults.
-        """
-        config = cls._render_config
-
-        # Determine the effective font_size for this update
-        effective_font_size = font_size if font_size is not None else config['font_size']
-        if font_size is not None: # Update font_size if provided
-            config['font_size'] = font_size
-
-        # Update settings, using passed value or keeping current config value if None
-        if carbon is not None: config['carbon'] = carbon
-        if dashes is not None: config['dashes'] = dashes
-        if span_dy is not None: config['span_dy'] = span_dy
-        else: config['span_dy'] = 0.3 * effective_font_size # Recalculate if not provided, based on effective_font_size
-        if aam is not None: config['mapping'] = aam # Note: arg is aam, config key is mapping
-        if span_size is not None: config['span_size'] = span_size
-        else: config['span_size'] = 0.7 * effective_font_size
-        if other_size is not None: config['other_size'] = other_size
-        else: config['other_size'] = 0.6 * effective_font_size
-        if monochrome is not None: config['monochrome'] = monochrome
-        if bond_color is not None: config['bond_color'] = bond_color
-        if bond_width is not None: config['bond_width'] = bond_width
-        if query_color is not None: config['query_color'] = query_color # New
-        if other_color is not None: config['other_color'] = other_color
-        if bond_radius is not None: config['bond_radius'] = bond_radius
-        if atom_radius is not None: config['atom_radius'] = -atom_radius # Note: sign flip for atom_radius
-        if aam_size is not None: config['mapping_size'] = aam_size # Note: arg is aam_size, config key is mapping_size
-        else: config['mapping_size'] = 0.5 * effective_font_size
-        if atoms_colors is not None: config['atoms_colors'] = atoms_colors
-        if triple_space is not None: config['triple_space'] = triple_space
-        if double_space is not None: config['double_space'] = double_space
-        if broken_color is not None: config['broken_color'] = broken_color # New
-        if formed_color is not None: config['formed_color'] = formed_color # New
-        if aam_color is not None: config['mapping_color'] = aam_color # Note: arg is aam_color, config key is mapping_color
-        if aromatic_space is not None: config['aromatic_space'] = aromatic_space
-        if aromatic_dashes is not None: config['aromatic_dashes'] = aromatic_dashes
-
-        if dx_m is not None: config['dx_m'] = dx_m
-        else: config['dx_m'] = 0.1 * effective_font_size
-        if dy_m is not None: config['dy_m'] = dy_m
-        else: config['dy_m'] = 0.4 * effective_font_size
-
-        if other_font_style is not None: config['other_font_style'] = other_font_style
-
-        if dx_ci is not None: config['dx_ci'] = dx_ci
-        else: config['dx_ci'] = 0.1 * effective_font_size
-        if dy_ci is not None: config['dy_ci'] = dy_ci
-        else: config['dy_ci'] = 0.4 * effective_font_size
-        
-        if dx_nh is not None: config['dx_nh'] = dx_nh # New
-        else: config['dx_nh'] = 0.15 * effective_font_size
-        if dy_nh is not None: config['dy_nh'] = dy_nh # New
-        else: config['dy_nh'] = 0.3 * effective_font_size
-        
-        if cgr_aromatic_space is not None: config['cgr_aromatic_space'] = cgr_aromatic_space # New
-        if symbols_font_style is not None: config['symbols_font_style'] = symbols_font_style
-        if wedge_space is not None: config['wedge_space'] = wedge_space # Original
-        if mapping_font_style is not None: config['mapping_font_style'] = mapping_font_style # Original
+    depict_settings = staticmethod(depict_settings)
 
     @cached_method
     def _repr_svg_(self):
