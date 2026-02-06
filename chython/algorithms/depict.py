@@ -238,7 +238,7 @@ class DepictMolecule:
     __slots__ = ()
 
     def depict(self: Union['MoleculeContainer', 'DepictMolecule'], *, width=None, height=None, clean2d: bool = True,
-               format: Literal['svg', 'png', 'svgz'] = 'svg', png_width=1000, png_heigh=1000, png_scale=1.,
+               format: Literal['svg', 'png', 'svgz'] = 'svg', png_width=1000, png_height=1000, png_scale=1.,
                _embedding=False) -> Union[str, bytes]:
         """
         Depict molecule in SVG or PNG format.
@@ -247,7 +247,7 @@ class DepictMolecule:
         :param height: set svg height param. by default auto-calculated.
         :param clean2d: calculate coordinates if necessary.
         :param format: output format - svg string, png bytes or gz compressed svg
-        :param png_width, png_heigh: viewport size for PNG rendering
+        :param png_width, png_height: viewport size for PNG rendering
         :param png_scale: image scaling in PNG rendering
         """
         uid = str(uuid4())
@@ -288,7 +288,7 @@ class DepictMolecule:
         if format == 'svg':
             return svg
         elif format == 'png':
-            return svg2png(svg, png_width, png_heigh, png_scale)
+            return svg2png(svg, png_width, png_height, png_scale)
         elif format == 'svgz':
             return compress(svg.encode(), 9)
         raise ValueError(f'format must be svg, png or svgz, not {format}')
@@ -496,7 +496,7 @@ class DepictReaction:
 
     def depict(self: 'ReactionContainer', *, width=None, height=None, clean2d: bool = True,
                format: Literal['svg', 'png', 'svgz'] = 'svg',
-               png_width=1000, png_heigh=1000, png_scale=1.) -> Union[str, bytes]:
+               png_width=1000, png_height=1000, png_scale=1.) -> Union[str, bytes]:
         """
         Depict reaction in SVG format.
 
@@ -504,7 +504,7 @@ class DepictReaction:
         :param height: set svg height param. by default auto-calculated.
         :param clean2d: calculate coordinates if necessary.
         :param format: output format - svg string, png bytes or gz compressed svg
-        :param png_width, png_heigh: viewport size for PNG rendering
+        :param png_width, png_height: viewport size for PNG rendering
         :param png_scale: image scaling in PNG rendering
         """
         arrow_color = _render_config['arrow_color']
@@ -576,7 +576,7 @@ class DepictReaction:
         if format == 'svg':
             return svg
         elif format == 'png':
-            return svg2png(svg, png_width, png_heigh, png_scale)
+            return svg2png(svg, png_width, png_height, png_scale)
         elif format == 'svgz':
             return compress(svg.encode(), 9)
         raise ValueError(f'format must be svg, png or svgz, not {format}')

@@ -16,9 +16,9 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
+from collections import defaultdict
 from functools import cached_property
 from typing import Dict, Iterator, Tuple, Optional, List, Union
-from collections import defaultdict
 
 from .bonds import DynamicBond, Bond
 from . import cgr_query as query
@@ -652,16 +652,16 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             adj_update = defaultdict(set)
             for r in self.aromatic_rings:
                 if not center.isdisjoint(r):
-                    n = r[0]
-                    m = r[-1]
-                    if n in adj and m in adj[n]:
+                    first = r[0]
+                    last = r[-1]
+                    if first in adj and last in adj[first]:
                         for n, m in zip(r, r[1:]):
                             if m not in adj[n]:
                                 adj_update[n].add(m)
                                 adj_update[m].add(n)
-                    elif any(n in adj and m in adj[n] for n, m in zip(r, r[1:])):
-                        adj_update[n].add(m)
-                        adj_update[m].add(n)
+                    elif any(a in adj and b in adj[a] for a, b in zip(r, r[1:])):
+                        adj_update[first].add(last)
+                        adj_update[last].add(first)
                         for n, m in zip(r, r[1:]):
                             if m not in adj[n]:
                                 adj_update[n].add(m)
@@ -691,11 +691,11 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
     @cached_property
     def aromatic_rings(self) -> Tuple[Tuple[int, ...], ...]:
         """Existing or formed aromatic rings atoms numbers."""
-        adj = self._bonds
+        bonds = self._bonds
         return tuple(
             ring for ring in self.sssr
-            if (adj[ring[0]][ring[-1]].order == 4 and all(adj[n][m].order == 4 for n, m in zip(ring, ring[1:])))
-            or (adj[ring[0]][ring[-1]].p_order == 4 and all(adj[n][m].p_order == 4 for n, m in zip(ring, ring[1:])))
+            if (bonds[ring[0]][ring[-1]].order == 4 and all(bonds[n][m].order == 4 for n, m in zip(ring, ring[1:])))
+            or (bonds[ring[0]][ring[-1]].p_order == 4 and all(bonds[n][m].p_order == 4 for n, m in zip(ring, ring[1:])))
         )
 
 __all__ = ['CGRContainer']

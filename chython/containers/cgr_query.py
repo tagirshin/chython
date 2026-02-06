@@ -308,7 +308,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 atom._atomic_number = atomic_numbers.get(n, getattr(atom, '_atomic_number', 0))
                 atom._isotope = isotopes.get(n, getattr(atom, '_isotope', None))
                 atom._attach_to_graph(self, n)
-            except Exception:
+            except AttributeError:
                 pass
 
     @property

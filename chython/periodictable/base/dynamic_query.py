@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+#
+#  Copyright 2025 Ramil Nugmanov <nougmanoff@protonmail.com>
+#  This file is part of chython.
+#
+#  chython is free software; you can redistribute it and/or modify
+#  it under the terms of the GNU Lesser General Public License as published by
+#  the Free Software Foundation; either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU Lesser General Public License for more details.
+#
+#  You should have received a copy of the GNU Lesser General Public License
+#  along with this program; if not, see <https://www.gnu.org/licenses/>.
+#
 from typing import Tuple, Dict, Type, Union, Optional
 from .dynamic import Dynamic, DynamicElement
 from .element import Element
@@ -159,11 +177,6 @@ class DynamicQueryElement(DynamicQuery):
 
         dqe = cls(atomic_number=source_atomic_number, isotope=source_isotope, **kwargs)
         
-        if isinstance(atom, (QueryElement, DynamicQueryElement, AnyElement)):
-            pass
-        elif isinstance(atom, (Element, DynamicElement)):
-            pass
-        
         if isinstance(atom, (DynamicQueryElement, DynamicAnyElement)) and isotope is None and not kwargs:
             return atom.copy()
 
@@ -179,18 +192,33 @@ class DynamicQueryElement(DynamicQuery):
     def __eq__(self, other):
         if not isinstance(other, DynamicQueryElement):
             return False
-        return (self.atomic_number == other.atomic_number and
-                self.isotope == other.isotope)
+        if self.atomic_number != other.atomic_number or self.isotope != other.isotope:
+            return False
+        try:
+            if (self.charge != other.charge or self.is_radical != other.is_radical or
+                    self.p_charge != other.p_charge or self.p_is_radical != other.p_is_radical):
+                return False
+        except IsNotConnectedAtom:
+            pass
+        return True
 
     def __hash__(self):
         return hash((self.atomic_number, self.isotope or 0))
 
+    def __repr__(self):
+        return f'{self.atomic_symbol}()'
+
 
 class DynamicAnyElement(DynamicQuery):
-    __slots__ = ()
+    __slots__ = ('_isotope',)
 
     def __init__(self, isotope: Optional[int] = None, **kwargs):
         super().__init__()
+        self._isotope = isotope
+
+    @property
+    def isotope(self) -> Optional[int]:
+        return self._isotope
 
     @property
     def atomic_symbol(self) -> str:
@@ -212,11 +240,19 @@ class DynamicAnyElement(DynamicQuery):
     def atomic_radius(self):
         return 0.5
 
+    def copy(self, *args, **kwargs) -> 'DynamicAnyElement':
+        copy = object.__new__(self.__class__)
+        copy._isotope = self._isotope
+        return copy
+
     def __eq__(self, other):
         return isinstance(other, DynamicAnyElement)
 
     def __hash__(self):
         return hash((self.atomic_number,))
+
+    def __repr__(self):
+        return 'A()'
 
 
 __all__ = ['DynamicQueryElement', 'DynamicAnyElement']
