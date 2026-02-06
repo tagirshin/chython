@@ -631,10 +631,6 @@ class DepictReaction:
 class Depict:
     __slots__ = ()
 
-    _render_config = _render_config
-
-    depict_settings = staticmethod(depict_settings)
-
     @cached_method
     def _repr_svg_(self):
         return self.depict()
@@ -646,7 +642,7 @@ class Depict:
         min_y = min(y for _, y in values)
         max_y = max(y for _, y in values)
 
-        config = self._render_config
+        config = _render_config
         bonds = self._render_bonds()
         atoms, masks = self._render_atoms()
         if embedding:
@@ -668,7 +664,7 @@ class Depict:
 
     @classmethod
     def _graph_svg(cls, atoms, bonds, masks, viewbox_x, viewbox_y, width, height):
-        config = cls._render_config
+        config = _render_config
         svg = ['  <g>']
         if bonds:
             if masks:
@@ -698,7 +694,7 @@ class Depict:
 
     @classmethod
     def _masks_svg(cls, masks):
-        config = cls._render_config
+        config = _render_config
 
         font_size = config['font_size']
         other_size = config['other_size']
@@ -741,7 +737,7 @@ class Depict:
 
     def _render_bonds(self):
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         broken = config['broken_color']
         formed = config['formed_color']
@@ -990,7 +986,7 @@ class Depict:
         return svg
 
     def __render_aromatic_bond(self, n_x, n_y, m_x, m_y, c_x, c_y, color):
-        config = self._render_config
+        config = _render_config
 
         dash1, dash2 = config['dashes']
         dash3, dash4 = config['aromatic_dashes']
@@ -1029,7 +1025,7 @@ class Depict:
         charges = self._charges
         radicals = self._radicals
         p_charges = self._p_charges
-        config = self._render_config
+        config = _render_config
         p_radicals = self._p_radicals
 
         carbon = config['carbon']
@@ -1134,7 +1130,7 @@ class DepictCGR(Depict):
 
     def _render_bonds(self):
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         broken = config['broken_color']
         formed = config['formed_color']
@@ -1383,7 +1379,7 @@ class DepictCGR(Depict):
         return svg
 
     def __render_aromatic_bond(self, n_x, n_y, m_x, m_y, c_x, c_y, color):
-        config = self._render_config
+        config = _render_config
 
         dash1, dash2 = config['dashes']
         dash3, dash4 = config['aromatic_dashes']
@@ -1422,7 +1418,7 @@ class DepictCGR(Depict):
         charges = self._charges
         radicals = self._radicals
         p_charges = self._p_charges
-        config = self._render_config
+        config = _render_config
         p_radicals = self._p_radicals
 
         carbon = config['carbon']
@@ -1524,7 +1520,7 @@ class DepictQuery(Depict):
     def _render_bonds(self):
         svg = []
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         dash1, dash2 = config['dashes']
         double_space = config['double_space']
@@ -1557,7 +1553,7 @@ class DepictQuery(Depict):
 
     def _render_atoms(self):
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         carbon = config['carbon']
         mapping = config['mapping']
@@ -1707,7 +1703,7 @@ class DepictQueryCGR(Depict):
     def _render_bonds(self):
         svg = []
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         dash1, dash2 = config['dashes']
         broken = config['broken_color']
@@ -1969,7 +1965,7 @@ class DepictQueryCGR(Depict):
 
     def _render_atoms(self):
         plane = self._plane
-        config = self._render_config
+        config = _render_config
 
         carbon = config['carbon']
         font_size = config['font_size']

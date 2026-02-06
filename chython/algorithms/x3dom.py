@@ -19,6 +19,7 @@
 #
 from math import acos, sqrt
 from collections import defaultdict
+from .depict import _render_config
 
 
 def plane_normal(nmx, nmy, nmz, nox, noy, noz):
@@ -99,7 +100,7 @@ class X3dom:
         return JupyterWidget(self.depict3d(index), width, height)
 
     def __render_atoms(self, xyz):
-        config = self._render_config
+        config = _render_config
 
         font = config['font_size']
         carbon = config['carbon']
@@ -141,7 +142,7 @@ class X3dom:
         return ''.join(atoms)
 
     def _render_3d_dashes(self, nx, ny, nz, nmx, nmy, nmz, nm_ln, r_angle=None, cgr_color=''):
-        config = self._render_config
+        config = _render_config
 
         bond_radius = config['bond_radius']
         if cgr_color:
@@ -182,7 +183,7 @@ class X3dom:
         return xml
 
     def _render_3d_aromatic_bond(self, n_x, n_y, n_z, m_x, m_y, m_z, c_x, c_y, c_z):
-        aromatic_space = self._render_config['aromatic_space']
+        aromatic_space = _render_config['aromatic_space']
 
         # n aligned xyz
         nc_x, nc_y, nc_z = c_x - n_x, c_y - n_y, c_z - n_z
@@ -206,7 +207,7 @@ class X3domMolecule(X3dom):
 
     def _render_3d_bonds(self, xyz):
         bonds = self._bonds
-        config = self._render_config
+        config = _render_config
 
         bond_color = config['bond_color']
         bond_radius = config['bond_radius']
@@ -358,7 +359,7 @@ class X3domCGR(X3dom):
 
     def _render_3d_bonds(self, xyz):
         bonds = self._bonds
-        config = self._render_config
+        config = _render_config
 
         broken = config['broken_color']
         formed = config['formed_color']
