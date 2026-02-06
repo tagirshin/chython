@@ -77,13 +77,6 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         except KeyError as e:
             raise BondNotFound from e
 
-    def has_bond(self, n: int, m: int) -> bool:
-        try:
-            # check if atom exists and has a bonds dict
-            return m in self._bonds[n]
-        except KeyError:
-            return False # If atom n doesn't exist, it has no bonds.
-
     def _validate_charge(self, charge: int) -> int:
         # Placeholder: Add actual validation logic if needed
         # For now, just ensure it's an int.

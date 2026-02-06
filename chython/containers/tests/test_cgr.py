@@ -10,7 +10,7 @@ from chython.containers.cgr_query import QueryCGRContainer
 from chython.periodictable.base.dynamic import DynamicElement
 from chython.periodictable.base.element import Element
 from chython.periodictable import C
-from chython.exceptions import AtomNotFound
+from chython.exceptions import AtomNotFound, BondNotFound
 # Explicitly import some elements to ensure periodictable __init__ runs fully
 from chython.periodictable import C, O, N 
 from chython.containers.bonds import DynamicBond
@@ -93,17 +93,14 @@ class TestCGRContainer(unittest.TestCase):
 
         for n1_orig, n2_orig, bond_orig in cgr.bonds():
             if sub.has_atom(n1_orig) and sub.has_atom(n2_orig):
-                self.assertTrue(sub.has_bond(n1_orig, n2_orig))
-                self.assertEqual(sub.bond(n1_orig,n2_orig).order, bond_orig.order)
-                self.assertEqual(sub.bond(n1_orig,n2_orig).p_order, bond_orig.p_order)
-            else: # If one atom is outside sub, bond should not be in sub
-                # This bond connects an atom in the substructure to one outside.
-                # It should NOT exist in the substructure itself.
+                sub_bond = sub.bond(n1_orig, n2_orig)
+                self.assertEqual(sub_bond.order, bond_orig.order)
+                self.assertEqual(sub_bond.p_order, bond_orig.p_order)
+            else:
+                # Bond connects an atom in sub to one outside — should not exist in sub
                 if sub.has_atom(n1_orig) != sub.has_atom(n2_orig):
-                    try:
-                        self.assertFalse(sub.has_bond(n1_orig, n2_orig))
-                    except AtomNotFound:
-                        pass
+                    with self.assertRaises((BondNotFound, AtomNotFound)):
+                        sub.bond(n1_orig, n2_orig)
 
 
     def test_substructure_as_query(self):
@@ -145,15 +142,15 @@ class TestCGRContainer(unittest.TestCase):
 
         m2 = cgr.add_atom(c_atom.copy(), 2)
         cgr.add_bond(m1, m2, DynamicBond(1, 2)) # R: 1-2, P: 1=2
-        self.assertTrue(cgr.has_bond(1, 2))
-        self.assertEqual(cgr.bond(1,2).order, 1)
-        self.assertEqual(cgr.bond(1,2).p_order, 2)
+        self.assertEqual(cgr.bond(1, 2).order, 1)
+        self.assertEqual(cgr.bond(1, 2).p_order, 2)
         # Check hybridization update
         self.assertEqual(cgr._hybridizations[1], 1) # Based on bond order 1
         self.assertEqual(cgr._p_hybridizations[1], 2) # Based on p_order 2
 
         cgr.delete_bond(1, 2)
-        self.assertFalse(cgr.has_bond(1,2))
+        with self.assertRaises(BondNotFound):
+            cgr.bond(1, 2)
         self.assertEqual(cgr._hybridizations[1], 1) # Recalculated to default
         self.assertEqual(cgr._p_hybridizations[1], 1)
 
