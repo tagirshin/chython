@@ -20,6 +20,7 @@
 from asyncio import new_event_loop
 from CachedMethods import cached_method
 from collections import defaultdict
+from functools import partial
 from math import atan2, sin, cos, hypot
 from os.path import join
 from tempfile import TemporaryDirectory
@@ -635,12 +636,47 @@ class Depict:
     def _repr_svg_(self):
         return self.depict()
 
-    def depict(self, *, embedding=False):
+    def depict(self, *, width=None, height=None, clean2d: bool = True,
+               format: Literal['svg', 'png', 'svgz'] = 'svg', png_width=1000, png_height=1000, png_scale=1.,
+               embedding=False) -> Union[str, bytes]:
+        """
+        Depict structure in SVG, PNG or SVGZ format.
+
+        :param width: set svg width param. by default auto-calculated.
+        :param height: set svg height param. by default auto-calculated.
+        :param clean2d: calculate coordinates if necessary.
+        :param format: output format - svg string, png bytes or gz compressed svg
+        :param png_width, png_height: viewport size for PNG rendering
+        :param png_scale: image scaling in PNG rendering
+        """
+        if not self._plane or len(self._plane) < len(self._atoms):
+            if clean2d:
+                try:
+                    self.clean2d()
+                except (ImportError, Exception):
+                    pass
+            for n in self._atoms:
+                if n not in self._plane:
+                    self._plane[n] = (0., 0.)
         values = self._plane.values()
-        min_x = min(x for x, _ in values)
-        max_x = max(x for x, _ in values)
-        min_y = min(y for _, y in values)
-        max_y = max(y for _, y in values)
+        if not values:
+            min_x = max_x = min_y = max_y = 0.
+        else:
+            min_x = min(x for x, _ in values)
+            max_x = max(x for x, _ in values)
+            min_y = min(y for _, y in values)
+            max_y = max(y for _, y in values)
+            if clean2d and len(self) > 1 and max_y - min_y < .01 and max_x - min_x < 0.01:
+                try:
+                    self.clean2d()
+                except (ImportError, Exception):
+                    pass
+                else:
+                    values = self._plane.values()
+                    min_x = min(x for x, _ in values)
+                    max_x = max(x for x, _ in values)
+                    min_y = min(y for _, y in values)
+                    max_y = max(y for _, y in values)
 
         config = _render_config
         bonds = self._render_bonds()
@@ -650,17 +686,29 @@ class Depict:
 
         font_size = config['font_size']
         font125 = 1.25 * font_size
-        width = max_x - min_x + 3.0 * font_size
-        height = max_y - min_y + 2.5 * font_size
+        _width = max_x - min_x + 3.0 * font_size
+        _height = max_y - min_y + 2.5 * font_size
         viewbox_x = min_x - font125
         viewbox_y = -max_y - font125
 
-        svg = [f'<svg width="{width:.2f}cm" height="{height:.2f}cm" '
-               f'viewBox="{viewbox_x:.2f} {viewbox_y:.2f} {width:.2f} '
-               f'{height:.2f}" xmlns="http://www.w3.org/2000/svg" version="1.1">']
-        svg.extend(self._graph_svg(atoms, bonds, masks, viewbox_x, viewbox_y, width, height))
+        if width is None:
+            width = f'{_width:.2f}cm'
+        if height is None:
+            height = f'{_height:.2f}cm'
+
+        svg = [f'<svg width="{width}" height="{height}" '
+               f'viewBox="{viewbox_x:.2f} {viewbox_y:.2f} {_width:.2f} '
+               f'{_height:.2f}" xmlns="http://www.w3.org/2000/svg" version="1.1">']
+        svg.extend(self._graph_svg(atoms, bonds, masks, viewbox_x, viewbox_y, _width, _height))
         svg.append('</svg>')
-        return '\n'.join(svg)
+        svg = '\n'.join(svg)
+        if format == 'svg':
+            return svg
+        elif format == 'png':
+            return svg2png(svg, png_width, png_height, png_scale)
+        elif format == 'svgz':
+            return compress(svg.encode(), 9)
+        raise ValueError(f'format must be svg, png or svgz, not {format}')
 
     @classmethod
     def _graph_svg(cls, atoms, bonds, masks, viewbox_x, viewbox_y, width, height):
