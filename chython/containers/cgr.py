@@ -30,13 +30,12 @@ from ..algorithms.rings import Rings
 from ..algorithms.smiles import CGRSmiles
 from ..algorithms.calculate2d import Calculate2DCGR
 from ..algorithms.depict import DepictCGR
-from ..algorithms.x3dom import X3domCGR
 
 from ..periodictable import DynamicElement, Element, DynamicQueryElement
 from ..exceptions import MappingError, AtomNotFound, BondNotFound
 
 
-class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
+class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
     __slots__ = ('_atoms', '_bonds', '_conformers', '_charges', '_radicals', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
     _atoms: Dict[int, DynamicElement]
     _bonds: Dict[int, Dict[int, DynamicBond]]

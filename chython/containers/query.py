@@ -19,12 +19,14 @@
 from typing import Tuple, Union
 from .bonds import Bond, QueryBond
 from .graph import Graph
+from ..algorithms.calculate2d import Calculate2DQuery
+from ..algorithms.depict import DepictQuery
 from ..algorithms.isomorphism import QueryIsomorphism
 from ..periodictable import Element, QueryElement
 from ..periodictable.base import Query
 
 
-class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism):
+class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, DepictQuery, Calculate2DQuery):
     __slots__ = ('_smarts',)
 
     def __init__(self, smarts: str):
