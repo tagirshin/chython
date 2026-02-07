@@ -16,9 +16,9 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
+from collections import defaultdict
 from functools import cached_property
 from typing import Dict, Iterator, Tuple, Optional, List, Union
-from collections import defaultdict
 
 from .bonds import DynamicBond, Bond
 from . import cgr_query as query
@@ -30,13 +30,12 @@ from ..algorithms.rings import Rings
 from ..algorithms.smiles import CGRSmiles
 from ..algorithms.calculate2d import Calculate2DCGR
 from ..algorithms.depict import DepictCGR
-from ..algorithms.x3dom import X3domCGR
 
 from ..periodictable import DynamicElement, Element, DynamicQueryElement
 from ..exceptions import MappingError, AtomNotFound, BondNotFound
 
 
-class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
+class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
     __slots__ = ('_atoms', '_bonds', '_conformers', '_charges', '_radicals', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
     _atoms: Dict[int, DynamicElement]
     _bonds: Dict[int, Dict[int, DynamicBond]]
@@ -77,13 +76,6 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
             return self._bonds[n][m]
         except KeyError as e:
             raise BondNotFound from e
-
-    def has_bond(self, n: int, m: int) -> bool:
-        try:
-            # check if atom exists and has a bonds dict
-            return m in self._bonds[n]
-        except KeyError:
-            return False # If atom n doesn't exist, it has no bonds.
 
     def _validate_charge(self, charge: int) -> int:
         # Placeholder: Add actual validation logic if needed
@@ -613,55 +605,47 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
     def center_atoms(self) -> Tuple[int, ...]:
         """ Get list of atoms of reaction center (atoms with dynamic: bonds, charges, radicals).
         """
-        center = {n for n, a in self._atoms.items() if a.is_dynamic}
+        charges = self._charges
+        p_charges = self._p_charges
+        radicals = self._radicals
+        p_radicals = self._p_radicals
+        center = {n for n in self._atoms
+                  if charges.get(n, 0) != p_charges.get(n, 0)
+                  or radicals.get(n, False) != p_radicals.get(n, False)}
         center.update(n for n, m_bond in self._bonds.items() if any(bond.is_dynamic for bond in m_bond.values()))
         return tuple(center)
 
     @cached_property
     def center_bonds(self) -> Tuple[Tuple[int, int], ...]:
-        """Get list of bonds of reaction center (bonds with dynamic orders or touching center atoms)."""
-        center_atoms = set(self.center_atoms)
-        bonds = []
-        for n, m, bond in self.bonds():
-            if bond.is_dynamic or n in center_atoms or m in center_atoms:
-                bonds.append((n, m))
-        return tuple(bonds)
+        """Get list of bonds of reaction center (bonds with dynamic orders)."""
+        return tuple((n, m) for n, m, bond in self.bonds() if bond.is_dynamic)
 
     @cached_property
     def centers_list(self) -> Tuple[Tuple[int, ...], ...]:
         """Get a list of atom groups for each reaction center component."""
-        radicals = self._radicals
-        charges = self._charges
-        p_charges = self._p_charges
-        p_radicals = self._p_radicals
-        center = set()
+        center = set(self.center_atoms)
         adj = defaultdict(set)
-
-        for n, c in charges.items():
-            if c != p_charges.get(n, c) or radicals.get(n, False) != p_radicals.get(n, False):
-                center.add(n)
 
         for n, m_bond in self._bonds.items():
             for m, bond in m_bond.items():
                 if bond.is_dynamic:
                     adj[n].add(m)
-        center.update(adj)
 
         # propagate through aromatic rings if any bond changes inside
         if self.aromatic_rings:
             adj_update = defaultdict(set)
             for r in self.aromatic_rings:
                 if not center.isdisjoint(r):
-                    n = r[0]
-                    m = r[-1]
-                    if n in adj and m in adj[n]:
+                    first = r[0]
+                    last = r[-1]
+                    if first in adj and last in adj[first]:
                         for n, m in zip(r, r[1:]):
                             if m not in adj[n]:
                                 adj_update[n].add(m)
                                 adj_update[m].add(n)
-                    elif any(n in adj and m in adj[n] for n, m in zip(r, r[1:])):
-                        adj_update[n].add(m)
-                        adj_update[m].add(n)
+                    elif any(a in adj and b in adj[a] for a, b in zip(r, r[1:])):
+                        adj_update[first].add(last)
+                        adj_update[last].add(first)
                         for n, m in zip(r, r[1:]):
                             if m not in adj[n]:
                                 adj_update[n].add(m)
@@ -691,11 +675,11 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, X3domCGR, Morgan, Rings
     @cached_property
     def aromatic_rings(self) -> Tuple[Tuple[int, ...], ...]:
         """Existing or formed aromatic rings atoms numbers."""
-        adj = self._bonds
+        bonds = self._bonds
         return tuple(
             ring for ring in self.sssr
-            if (adj[ring[0]][ring[-1]].order == 4 and all(adj[n][m].order == 4 for n, m in zip(ring, ring[1:])))
-            or (adj[ring[0]][ring[-1]].p_order == 4 and all(adj[n][m].p_order == 4 for n, m in zip(ring, ring[1:])))
+            if (bonds[ring[0]][ring[-1]].order == 4 and all(bonds[n][m].order == 4 for n, m in zip(ring, ring[1:])))
+            or (bonds[ring[0]][ring[-1]].p_order == 4 and all(bonds[n][m].p_order == 4 for n, m in zip(ring, ring[1:])))
         )
 
 __all__ = ['CGRContainer']

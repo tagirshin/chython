@@ -46,4 +46,4 @@ from_rdkit_molecule = from_rdkit
 
 
 __all__ = [x for x in locals() if x.endswith('Container')]
-__all__.extend(['Bond', 'QueryBond', 'unpack', 'unpach', 'from_rdkit', 'from_rdkit_molecule'])
+__all__.extend(['Bond', 'DynamicBond', 'QueryBond', 'unpack', 'unpach', 'from_rdkit', 'from_rdkit_molecule'])

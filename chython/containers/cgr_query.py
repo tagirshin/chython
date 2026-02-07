@@ -236,7 +236,9 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 raise TypeError('neighbors should be list or tuple of ints')
             if any(n < 0 or n > 14 for n in neighbors):
                 raise ValueError('neighbors should be in range [0, 14]')
-            neighbors = tuple(neighbors)
+            if len(set(neighbors)) != len(neighbors):
+                raise ValueError('neighbors should be unique')
+            neighbors = tuple(sorted(neighbors))
         else:
             raise TypeError('neighbors should be int or list or tuple of ints')
         return neighbors
@@ -254,7 +256,9 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 raise TypeError('hybridizations should be list or tuple of ints')
             if any(h < 1 or h > 4 for h in hybridization):
                 raise ValueError('hybridizations should be in range [1, 4]')
-            hybridization = tuple(hybridization)
+            if len(set(hybridization)) != len(hybridization):
+                raise ValueError('hybridizations should be unique')
+            hybridization = tuple(sorted(hybridization))
         else:
             raise TypeError('hybridization should be int or list or tuple of ints')
         return hybridization
@@ -308,7 +312,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 atom._atomic_number = atomic_numbers.get(n, getattr(atom, '_atomic_number', 0))
                 atom._isotope = isotopes.get(n, getattr(atom, '_isotope', None))
                 atom._attach_to_graph(self, n)
-            except Exception:
+            except AttributeError:
                 pass
 
     @property

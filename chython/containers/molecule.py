@@ -40,7 +40,6 @@ from ..algorithms.smiles import MoleculeSmiles
 from ..algorithms.standardize import StandardizeMolecule
 from ..algorithms.stereo import MoleculeStereo
 from ..algorithms.tautomers import Tautomers
-from ..algorithms.x3dom import X3domMolecule
 from ..exceptions import ValenceError
 from ..periodictable import DynamicElement, Element, H as _H
 
@@ -65,7 +64,7 @@ S = 16
 
 class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, MoleculeIsomorphism,
                         Aromatize, StandardizeMolecule, MoleculeSmiles, DepictMolecule, Calculate2DMolecule,
-                        Conformers, Fingerprints, Tautomers, RDkit, MCS, X3domMolecule):
+                        Conformers, Fingerprints, Tautomers, RDkit, MCS):
     __slots__ = ('_meta', '_name', '_conformers', '_changed', '_backup')
 
     def __init__(self):

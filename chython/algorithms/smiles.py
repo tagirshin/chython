@@ -46,6 +46,7 @@ dyn_charge_str = {(i, j): f'{charge_str[i]}>{charge_str[j]}' if i != j else char
 dyn_charge_str[(0, 0)] = ''
 
 dyn_radical_str = {(True, True): '*', (True, False): '*>^', (False, True): '^>*'}
+hybridization_str = {1: '1', 2: '2', 3: '3', 4: '4'}
 
 # atomic number constants
 B = 5
