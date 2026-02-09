@@ -275,6 +275,28 @@ class Element(ABC):
         """
         return self._in_ring
 
+    def __getstate__(self):
+        state = {}
+        for cls in type(self).__mro__:
+            for slot in getattr(cls, '__slots__', ()):
+                if slot in ('__dict__', '__weakref__'):
+                    continue
+                try:
+                    state[slot] = getattr(self, slot)
+                except AttributeError:
+                    pass
+        return state
+
+    def __setstate__(self, state):
+        if isinstance(state, tuple):
+            # Python's default __slots__ pickle format: (dict_state, slots_state)
+            _, state = state
+        for key, value in state.items():
+            setattr(self, key, value)
+        # Backward compatibility: default for slots added in newer versions
+        if not hasattr(self, '_extended_stereo'):
+            self._extended_stereo = None
+
     def copy(self, full=False, hydrogens=False, stereo=False) -> 'Element':
         """
         Get a copy of the Element object with attribute copy control.
