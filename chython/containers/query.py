@@ -22,23 +22,18 @@ from .graph import Graph
 from ..algorithms.calculate2d import Calculate2DQuery
 from ..algorithms.depict import DepictQuery
 from ..algorithms.isomorphism import QueryIsomorphism
+from ..algorithms.smarts import Smarts
 from ..periodictable import Element, QueryElement
 from ..periodictable.base import Query
 
 
-class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, DepictQuery, Calculate2DQuery):
+class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQuery, Calculate2DQuery):
     __slots__ = ('_smarts', '_plane')
 
     def __init__(self, smarts: str):
         self._plane: Dict[int, Tuple[float, float]] = {}
         super().__init__()
         self._smarts = smarts
-
-    def __str__(self):
-        return self._smarts
-
-    def __repr__(self):
-        return f'smarts({self._smarts})'
 
     def add_atom(self, atom: Union[Query, Element, int, str], *args, xy=None, **kwargs):
         if not isinstance(atom, Query):

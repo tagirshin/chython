@@ -75,6 +75,18 @@ class Reactor(BaseReactor):
         super().__init__(reduce(or_, patterns), reduce(or_, products), delete_atoms, fix_aromatic_rings,
                          fix_tautomers, fix_broken_pyrroles)
 
+    def __str__(self):
+        lhs = '.'.join(format(p, 'm') for p in self._patterns)
+        rhs = '.'.join(format(p, 'm') for p in self._products)
+        return f'{lhs}>>{rhs}'
+
+    def __format__(self, format_spec):
+        if 'm' not in format_spec:
+            format_spec = f'{format_spec}m' if format_spec else 'm'
+        lhs = '.'.join(format(p, format_spec) for p in self._patterns)
+        rhs = '.'.join(format(p, format_spec) for p in self._products)
+        return f'{lhs}>>{rhs}'
+
     def __call__(self, *structures: MoleculeContainer):
         if any(not isinstance(structure, MoleculeContainer) for structure in structures):
             raise TypeError('only list of Molecules possible')
