@@ -39,10 +39,29 @@ class Smarts(Smiles):
     """
     __slots__ = ()
 
-    def to_smarts(self: 'QueryContainer', chython_specific: bool = False) -> str:
+    def to_smarts(self: 'QueryContainer', chython_specific: bool = False,
+                  mapping_renumber: dict = None) -> str:
+        """Generate SMARTS string.
+
+        :param chython_specific: Include z, x, M extensions.
+        :param mapping_renumber: Optional dict {internal_atom_number: exported_mapping}.
+            If provided, atom mapping is included using renumbered values.
+        """
+        kwargs = {}
         if chython_specific:
-            return format(self, 'c')
-        return str(self)
+            kwargs['chython_specific'] = True
+        if mapping_renumber is not None:
+            kwargs['mapping'] = True
+            kwargs['mapping_renumber'] = mapping_renumber
+
+        if not kwargs:
+            return str(self)
+
+        smiles, order = self._smiles(self._smiles_order(), _return_order=True, **kwargs)
+        if (cx := self._format_cxsmiles(order)) is not None:
+            smiles.append(' ')
+            smiles.append(cx)
+        return ''.join(smiles)
 
     @cached_method
     def __str__(self: 'QueryContainer'):
@@ -165,7 +184,9 @@ class Smarts(Smiles):
 
         # mapping
         if kwargs.get('mapping', False):
-            smi.append(f':{n}')
+            renumber = kwargs.get('mapping_renumber')
+            m = renumber[n] if renumber else n
+            smi.append(f':{m}')
 
         smi.append(']')
         return ''.join(smi)

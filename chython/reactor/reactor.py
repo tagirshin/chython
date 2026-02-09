@@ -75,16 +75,28 @@ class Reactor(BaseReactor):
         super().__init__(reduce(or_, patterns), reduce(or_, products), delete_atoms, fix_aromatic_rings,
                          fix_tautomers, fix_broken_pyrroles)
 
+    def _mapping_renumber(self):
+        """Build a mapping from internal atom numbers to sequential 1..N."""
+        all_atoms = set()
+        for qc in self._patterns:
+            all_atoms.update(qc._atoms)
+        for qc in self._products:
+            all_atoms.update(qc._atoms)
+        return {n: i for i, n in enumerate(sorted(all_atoms), 1)}
+
     def __str__(self):
-        lhs = '.'.join(format(p, 'm') for p in self._patterns)
-        rhs = '.'.join(format(p, 'm') for p in self._products)
+        renumber = self._mapping_renumber()
+        lhs = '.'.join(p.to_smarts(mapping_renumber=renumber) for p in self._patterns)
+        rhs = '.'.join(p.to_smarts(mapping_renumber=renumber) for p in self._products)
         return f'{lhs}>>{rhs}'
 
     def __format__(self, format_spec):
-        if 'm' not in format_spec:
-            format_spec = f'{format_spec}m' if format_spec else 'm'
-        lhs = '.'.join(format(p, format_spec) for p in self._patterns)
-        rhs = '.'.join(format(p, format_spec) for p in self._products)
+        renumber = self._mapping_renumber()
+        chython_specific = 'c' in format_spec if format_spec else False
+        lhs = '.'.join(p.to_smarts(chython_specific=chython_specific, mapping_renumber=renumber)
+                       for p in self._patterns)
+        rhs = '.'.join(p.to_smarts(chython_specific=chython_specific, mapping_renumber=renumber)
+                       for p in self._products)
         return f'{lhs}>>{rhs}'
 
     @classmethod
