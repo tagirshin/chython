@@ -73,6 +73,8 @@ dyn_charge_dict = {k: (v,) for k, v in dyn_charge_dict.items()}
 dyn_charge_dict.update(tmp)
 dyn_radical_dict = {'*': (True,), '*>^': (True, ('radical', None)), '^>*': (False, ('radical', None))}
 
+_aromatic_upper = {'c': 'C', 'n': 'N', 'o': 'O', 'p': 'P', 's': 'S', 'b': 'B', 'se': 'Se', 'te': 'Te'}
+
 
 def _tokenize(smiles):
     token_type = token = None
@@ -332,6 +334,28 @@ def _query_parse(token):
             element = element[0]
     else:
         raise IncorrectSmarts('Empty element')
+
+    # Handle lowercase aromatic element symbols (c, n, o, p, s, b, se, te)
+    aromatic_from_symbol = False
+    if isinstance(element, str):
+        upper = _aromatic_upper.get(element)
+        if upper:
+            element = upper
+            aromatic_from_symbol = True
+    elif isinstance(element, list):
+        new_elements = []
+        for e in element:
+            if isinstance(e, str):
+                upper = _aromatic_upper.get(e)
+                if upper:
+                    new_elements.append(upper)
+                    aromatic_from_symbol = True
+                else:
+                    new_elements.append(e)
+            else:
+                new_elements.append(e)
+        element = new_elements
+
     out['element'] = element
 
     for p in primitives[1:]:  # parse hydrogens (h), neighbors (D), rings_sizes (r or !R), hybridization == 4 (a)
@@ -367,6 +391,11 @@ def _query_parse(token):
                 out['heteroatoms'] = p
             else:  # z
                 out['hybridization'] = p
+
+    # Infer aromatic hybridization from lowercase symbol if not explicitly set
+    if aromatic_from_symbol and 'hybridization' not in out:
+        out['hybridization'] = 4
+
     return 0, out
 
 
@@ -427,8 +456,10 @@ def smarts_tokenize(smi):
     tokens = _tokenize(smi)
     out = []
     for token_type, token in tokens:
-        if token_type in (0, 8):  # simple atom
+        if token_type == 0:  # simple non-aromatic atom
             out.append((0, {'element': token}))
+        elif token_type == 8:  # simple aromatic atom (already uppercased by _tokenize)
+            out.append((0, {'element': token, 'hybridization': 4}))
         elif token_type == 5:
             out.append(_query_parse(token))
         else:
