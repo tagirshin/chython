@@ -87,6 +87,31 @@ class Reactor(BaseReactor):
         rhs = '.'.join(format(p, format_spec) for p in self._products)
         return f'{lhs}>>{rhs}'
 
+    @classmethod
+    def from_smarts(cls, rxn_smarts: str, **kwargs) -> 'Reactor':
+        """Parse a reaction SMARTS string into a Reactor.
+
+        Format: ``pattern1.pattern2>>product1.product2``
+
+        Each piece may carry CXSMARTS extensions: ``[C:1] |^1:0|``
+
+        :param rxn_smarts: Reaction SMARTS string with ``>>`` separator.
+        :param kwargs: Extra keyword arguments passed to Reactor.__init__
+            (delete_atoms, one_shot, etc.).
+        """
+        from ..files.daylight.smarts import smarts
+
+        if '>>' not in rxn_smarts:
+            raise ValueError(f'no >> in reaction SMARTS: {rxn_smarts}')
+
+        lhs, rhs = rxn_smarts.split('>>', 1)
+        patterns = tuple(smarts(s.strip()) for s in lhs.split('.') if s.strip())
+        products = tuple(smarts(s.strip()) for s in rhs.split('.') if s.strip())
+
+        if not patterns or not products:
+            raise ValueError('empty patterns or products')
+        return cls(patterns=patterns, products=products, **kwargs)
+
     def __call__(self, *structures: MoleculeContainer):
         if any(not isinstance(structure, MoleculeContainer) for structure in structures):
             raise TypeError('only list of Molecules possible')
