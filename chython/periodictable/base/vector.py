@@ -70,6 +70,13 @@ class Vector:
         """
         return hypot(self.x, self.y)
 
+    def __getitem__(self, index):
+        if index == 0:
+            return self.x
+        elif index == 1:
+            return self.y
+        raise IndexError(index)
+
     def __iter__(self):
         yield self.x
         yield self.y
