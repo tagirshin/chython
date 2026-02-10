@@ -53,6 +53,13 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         self._plane: Dict[int, Tuple[float, float]] = {}
         self.flush_cache()
 
+    def _sync_plane_to_atoms(self):
+        """Sync _plane dict coordinates to atom._xy."""
+        atoms = self._atoms
+        for n, xy in self._plane.items():
+            if n in atoms:
+                atoms[n].xy = xy
+
     # Methods from Graph
     def flush_cache(self):
         self.__dict__.clear()
@@ -148,6 +155,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
 
         if xy_coord is not None:
             self._plane[n] = xy_coord
+            atom.xy = xy_coord
         self._charges[n] = atom.charge
         self._radicals[n] = atom.is_radical
         self._p_charges[n] = p_charge
@@ -238,6 +246,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         target._p_hybridizations = {mg(n, n): h for n, h in target._p_hybridizations.items()}
         target._plane = {mg(n, n): p for n, p in target._plane.items()}
         target._conformers = [{mg(k, k): v for k, v in conf.items()} for conf in target._conformers]
+        target._sync_plane_to_atoms()
         target.flush_cache()
 
         if copy:
@@ -263,6 +272,9 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         copy._charges = self._charges.copy()
         copy._radicals = self._radicals.copy()
         copy._plane = self._plane.copy()
+        for n, xy in copy._plane.items():
+            if n in copy._atoms:
+                copy._atoms[n].xy = xy
         copy.__dict__ = {}
         return copy
 
@@ -364,6 +376,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
                 u._plane.update(op)
 
             u._conformers.clear()
+            u._sync_plane_to_atoms()
             if not copy:
                 u.flush_cache()
             return u
@@ -585,6 +598,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
     def __setstate__(self, state):
         for slot, value in state.items():
             setattr(self, slot, value)
+        self._sync_plane_to_atoms()
 
     def __iter__(self):
         return iter(self._atoms)

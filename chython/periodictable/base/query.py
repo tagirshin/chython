@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Tuple, Type, List, Union, Optional
 from .element import Element
+from .vector import Vector
 from .groups import GroupXVIII
 
 
@@ -44,13 +45,14 @@ def _validate(value, prop):
 
 
 class Query(ABC):
-    __slots__ = ('_neighbors', '_hybridization', '_masked')
+    __slots__ = ('_neighbors', '_hybridization', '_masked', '_xy')
 
     def __init__(self, neighbors: Union[int, Tuple[int, ...], None] = None,
                  hybridization: Union[int, Tuple[int, ...], None] = None, masked: bool = False):
         self.neighbors = neighbors
         self.hybridization = hybridization
         self.masked = masked
+        self._xy = Vector(0., 0.)
 
     @property
     @abstractmethod
@@ -89,6 +91,30 @@ class Query(ABC):
             raise TypeError('hybridization should be int or list or tuple of ints')
 
     @property
+    def x(self) -> float:
+        return self._xy.x
+
+    @x.setter
+    def x(self, value: float):
+        self._xy.x = value
+
+    @property
+    def y(self) -> float:
+        return self._xy.y
+
+    @y.setter
+    def y(self, value: float):
+        self._xy.y = value
+
+    @property
+    def xy(self) -> Vector:
+        return self._xy
+
+    @xy.setter
+    def xy(self, value: Tuple[float, float]):
+        self._xy = Vector(*value)
+
+    @property
     def masked(self):
         return self._masked
 
@@ -102,6 +128,7 @@ class Query(ABC):
         copy = object.__new__(self.__class__)
         copy._neighbors = self.neighbors
         copy._hybridization = self.hybridization
+        copy._xy = Vector(self._xy.x, self._xy.y)
 
         copy._masked = self.masked if full else False
         return copy
@@ -419,6 +446,8 @@ class QueryElement(ExtendedQuery, ABC):
         query = cls.from_atomic_number(atom.atomic_number)(atom.isotope)
         query._charge = atom.charge
         query._is_radical = atom.is_radical
+        if hasattr(atom, '_xy'):
+            query._xy = Vector(atom._xy.x, atom._xy.y)
 
         if neighbors:
             query._neighbors = (atom.neighbors,)

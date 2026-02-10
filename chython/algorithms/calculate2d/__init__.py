@@ -16,7 +16,6 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from . import molecule
 from .molecule import *
 from .reaction import *
 from math import sqrt
@@ -61,13 +60,18 @@ class Calculate2D:
             bond_reduce = 1.
 
         self_plane = self._plane
+        atoms = self._atoms
         for n, (x, y) in plane.items():
-            self_plane[n] = (x / bond_reduce, y / bond_reduce)
+            xy = (x / bond_reduce, y / bond_reduce)
+            self_plane[n] = xy
+            if n in atoms and hasattr(atoms[n], 'xy'):
+                atoms[n].xy = xy
 
         self.__dict__.pop('__cached_method__repr_svg_', None)
 
     def _fix_plane_mean(self, shift_x, shift_y=0, component=None):
         plane = self._plane
+        atoms = self._atoms
         if component is None:
             component = plane
 
@@ -75,7 +79,7 @@ class Calculate2D:
         right_atom = max(component, key=lambda x: plane[x][0])
 
         min_x = plane[left_atom][0] - shift_x
-        if len(self._atoms[left_atom].atomic_symbol) == 2:
+        if len(atoms[left_atom].atomic_symbol) == 2:
             min_x -= .2
 
         max_x = plane[right_atom][0] - min_x
@@ -84,19 +88,16 @@ class Calculate2D:
         mean_y = (max_y + min_y) / 2 - shift_y
         for n in component:
             x, y = plane[n]
-            plane[n] = (x - min_x, y - mean_y)
+            xy = (x - min_x, y - mean_y)
+            plane[n] = xy
+            if n in atoms and hasattr(atoms[n], 'xy'):
+                atoms[n].xy = xy
 
-        if isinstance(self, molecule.MoleculeContainer):
-            if -.18 <= plane[right_atom][1] <= .18:
-                factor = self._atoms[right_atom].implicit_hydrogens
-                if factor == 1:
-                    max_x += .15
-                elif factor:
-                    max_x += .25
         return max_x
 
     def _fix_plane_min(self, shift_x, shift_y=0, component=None):
         plane = self._plane
+        atoms = self._atoms
         if component is None:
             component = plane
 
@@ -107,15 +108,11 @@ class Calculate2D:
 
         for n in component:
             x, y = plane[n]
-            plane[n] = (x - min_x, y - min_y)
+            xy = (x - min_x, y - min_y)
+            plane[n] = xy
+            if n in atoms and hasattr(atoms[n], 'xy'):
+                atoms[n].xy = xy
 
-        if isinstance(self, molecule.MoleculeContainer):
-            if shift_y - .18 <= plane[right_atom][1] <= shift_y + .18:
-                factor = self._atoms[right_atom].implicit_hydrogens
-                if factor == 1:
-                    max_x += .15
-                elif factor:
-                    max_x += .25
         return max_x
 
 

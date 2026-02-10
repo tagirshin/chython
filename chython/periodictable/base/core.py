@@ -109,6 +109,15 @@ class Core(ABC):
         except AttributeError:
             raise IsNotConnectedAtom
 
+    @x.setter
+    def x(self, value: float):
+        try:
+            g = self._graph()
+            old = g._plane.get(self._map, (0., 0.))
+            g._plane[self._map] = (value, old[1])
+        except AttributeError:
+            raise IsNotConnectedAtom
+
     @property
     def y(self) -> float:
         """
@@ -119,6 +128,15 @@ class Core(ABC):
         except AttributeError:
             raise IsNotConnectedAtom
 
+    @y.setter
+    def y(self, value: float):
+        try:
+            g = self._graph()
+            old = g._plane.get(self._map, (0., 0.))
+            g._plane[self._map] = (old[0], value)
+        except AttributeError:
+            raise IsNotConnectedAtom
+
     @property
     def xy(self) -> Tuple[float, float]:
         """
@@ -126,6 +144,13 @@ class Core(ABC):
         """
         try:
             return self._graph()._plane[self._map]
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @xy.setter
+    def xy(self, value: Tuple[float, float]):
+        try:
+            self._graph()._plane[self._map] = tuple(value)
         except AttributeError:
             raise IsNotConnectedAtom
 

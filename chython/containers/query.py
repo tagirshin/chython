@@ -49,6 +49,7 @@ class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQu
         n = super().add_atom(atom, *args, **kwargs)
         if xy is not None:
             self._plane[n] = xy
+            atom.xy = xy
         return n
 
     def add_bond(self, n, m, bond: Union[QueryBond, Bond, int, Tuple[int, ...]]):
@@ -66,6 +67,9 @@ class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQu
         copy = super().copy(**kwargs)
         copy._plane = self._plane.copy()
         copy._smarts = self._smarts
+        for n, xy in copy._plane.items():
+            if n in copy._atoms:
+                copy._atoms[n].xy = xy
         return copy
 
     def union(self, other: 'QueryContainer', *, remap: bool = False, copy: bool = True) -> 'QueryContainer':
@@ -76,6 +80,9 @@ class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQu
             u._plane = {**self._plane, **other._plane}
         else:
             self._plane.update(other._plane)
+        for n, xy in u._plane.items():
+            if n in u._atoms:
+                u._atoms[n].xy = xy
         return u
 
 

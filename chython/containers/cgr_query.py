@@ -67,6 +67,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         atom._attach_to_graph(self, _map)
         if xy_coord is not None:
             self._plane[_map] = xy_coord
+            if hasattr(atom, 'xy'):
+                atom.xy = xy_coord
         self._charges[_map] = getattr(atom, '_charge', 0)
         self._radicals[_map] = getattr(atom, '_is_radical', False)
         self._p_charges[_map] = p_charge
@@ -159,6 +161,9 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
         copy._plane = self._plane.copy()
         copy._charges = self._charges.copy()
         copy._radicals = self._radicals.copy()
+        for n, xy in copy._plane.items():
+            if n in copy._atoms and hasattr(copy._atoms[n], 'xy'):
+                copy._atoms[n].xy = xy
         return copy
 
     def substructure(self, atoms, **kwargs) -> 'QueryCGRContainer':
@@ -314,6 +319,8 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 atom._attach_to_graph(self, n)
             except AttributeError:
                 pass
+            if n in self._plane and hasattr(atom, 'xy'):
+                atom.xy = self._plane[n]
 
     @property
     def atoms_order(self) -> Dict[int, int]:

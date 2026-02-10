@@ -17,8 +17,9 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from abc import ABC, abstractmethod
-from typing import Type, Optional
+from typing import Tuple, Type, Optional
 from .element import Element
+from .vector import Vector
 from .core import Core
 from ...exceptions import IsNotConnectedAtom
 
@@ -87,12 +88,13 @@ class Dynamic(Core):
 
 
 class DynamicElement(ABC):
-    __slots__ = ('_charge', '_is_radical', '_p_charge', '_p_is_radical', '_isotope')
+    __slots__ = ('_charge', '_is_radical', '_p_charge', '_p_is_radical', '_isotope', '_xy')
 
     def __init__(self, isotope: Optional[int] = None):
         self._isotope = isotope
         self._charge = self._p_charge = 0
         self._is_radical = self._p_is_radical = False
+        self._xy = Vector(0., 0.)
 
     @property
     def isotope(self):
@@ -146,6 +148,10 @@ class DynamicElement(ABC):
         dynamic._isotope = atom.isotope
         dynamic._charge = dynamic._p_charge = atom.charge
         dynamic._is_radical = dynamic._p_is_radical = atom.is_radical
+        if hasattr(atom, '_xy'):
+            dynamic._xy = Vector(atom._xy.x, atom._xy.y)
+        else:
+            dynamic._xy = Vector(0., 0.)
         return dynamic
 
     @classmethod
@@ -165,7 +171,35 @@ class DynamicElement(ABC):
         dynamic._p_charge = atom2.charge
         dynamic._is_radical = atom1.is_radical
         dynamic._p_is_radical = atom2.is_radical
+        if hasattr(atom1, '_xy'):
+            dynamic._xy = Vector(atom1._xy.x, atom1._xy.y)
+        else:
+            dynamic._xy = Vector(0., 0.)
         return dynamic
+
+    @property
+    def x(self) -> float:
+        return self._xy.x
+
+    @x.setter
+    def x(self, value: float):
+        self._xy.x = value
+
+    @property
+    def y(self) -> float:
+        return self._xy.y
+
+    @y.setter
+    def y(self, value: float):
+        self._xy.y = value
+
+    @property
+    def xy(self) -> Vector:
+        return self._xy
+
+    @xy.setter
+    def xy(self, value: Tuple[float, float]):
+        self._xy = Vector(*value)
 
     @property
     def charge(self) -> int:
@@ -209,6 +243,7 @@ class DynamicElement(ABC):
         copy._is_radical = self.is_radical
         copy._p_is_radical = self.p_is_radical
         copy._p_charge = self.p_charge
+        copy._xy = Vector(self._xy.x, self._xy.y)
         return copy
 
     def __copy__(self):

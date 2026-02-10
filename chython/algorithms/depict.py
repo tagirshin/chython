@@ -555,12 +555,16 @@ class DepictReaction:
             if clean2d:
                 for m in self.molecules():
                     if len(m) > 1:
-                        min_x = min(a.x for _, a in m.atoms())
-                        max_x = max(a.x for _, a in m.atoms())
-                        min_y = min(a.y for _, a in m.atoms())
-                        max_y = max(a.y for _, a in m.atoms())
-                        if max_y - min_y < .01 and max_x - min_x < 0.01:
+                        try:
+                            min_x = min(a.x for _, a in m.atoms())
+                            max_x = max(a.x for _, a in m.atoms())
+                            min_y = min(a.y for _, a in m.atoms())
+                            max_y = max(a.y for _, a in m.atoms())
+                        except AttributeError:
                             m.clean2d()
+                        else:
+                            if max_y - min_y < .01 and max_x - min_x < 0.01:
+                                m.clean2d()
             self.fix_positions()
 
         r_atoms = []
@@ -638,7 +642,7 @@ class Depict:
 
     def depict(self, *, width=None, height=None, clean2d: bool = True,
                format: Literal['svg', 'png', 'svgz'] = 'svg', png_width=1000, png_height=1000, png_scale=1.,
-               embedding=False) -> Union[str, bytes]:
+               _embedding=False) -> Union[str, bytes]:
         """
         Depict structure in SVG, PNG or SVGZ format.
 
@@ -655,9 +659,11 @@ class Depict:
                     self.clean2d()
                 except (ImportError, Exception):
                     pass
-            for n in self._atoms:
+            for n, atom in self._atoms.items():
                 if n not in self._plane:
                     self._plane[n] = (0., 0.)
+                    if hasattr(atom, 'xy'):
+                        atom.xy = (0., 0.)
         values = self._plane.values()
         if not values:
             min_x = max_x = min_y = max_y = 0.
@@ -681,8 +687,9 @@ class Depict:
         config = _render_config
         bonds = self._render_bonds()
         atoms, masks = self._render_atoms()
-        if embedding:
-            return atoms, bonds, masks, min_x, min_y, max_x, max_y
+        if _embedding:
+            uid = str(uuid4())
+            return atoms, bonds, [], masks, uid, min_x, min_y, max_x, max_y
 
         font_size = config['font_size']
         font125 = 1.25 * font_size
