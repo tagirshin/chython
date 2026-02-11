@@ -142,7 +142,7 @@ class Query(ABC):
 
 class ExtendedQuery(Query, ABC):
     __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
-                 '_total_connectivity', '_rings_count', '_charge_not')
+                 '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements')
 
     def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, Tuple[int, ...], None] = None,
                  ring_sizes: Union[int, Tuple[int, ...], None] = None,
@@ -160,6 +160,8 @@ class ExtendedQuery(Query, ABC):
         self.total_connectivity = total_connectivity
         self.rings_count = rings_count
         self._charge_not = charge_not
+        self._recursive_smarts = None
+        self._excluded_elements = None
 
     @property
     def charge(self) -> int:
@@ -271,6 +273,8 @@ class ExtendedQuery(Query, ABC):
         copy._total_connectivity = self.total_connectivity
         copy._rings_count = self._rings_count
         copy._charge_not = self._charge_not
+        copy._recursive_smarts = self._recursive_smarts
+        copy._excluded_elements = self._excluded_elements
 
         copy._stereo = self.stereo if full else None
         return copy
@@ -313,6 +317,13 @@ class AnyElement(ExtendedQuery):
         """
         if not isinstance(other, Element):
             return False
+        if self._excluded_elements:
+            for ex in self._excluded_elements:
+                if isinstance(ex, int):
+                    if other.atomic_number == ex:
+                        return False
+                elif other.atomic_symbol == ex:
+                    return False
         if self._charge_not == 'positive':
             if other.charge > 0:
                 return False

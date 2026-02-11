@@ -83,7 +83,9 @@ class Isomorphism:
                      components=None, get_mapping=None) -> Iterator[Dict[int, int]]:
         if components is None:  # ad-hoc for QueryContainer
             components, closures = self._compiled_query
-            get_mapping = partial(_get_mapping, query_closures=closures, o_atoms=other._atoms, o_bonds=other._bonds)
+            recursive_scope = self._precompute_recursive(other) if hasattr(self, '_precompute_recursive') else None
+            get_mapping = partial(_get_mapping, query_closures=closures, o_atoms=other._atoms, o_bonds=other._bonds,
+                                  recursive_scope=recursive_scope)
 
         if searching_scope is not None and not isinstance(searching_scope, set):
             searching_scope = set(searching_scope)
@@ -314,8 +316,38 @@ class QueryIsomorphism(Isomorphism):
     def _has_extended_query(self):
         return any(
             getattr(a, '_total_connectivity', ()) or getattr(a, '_rings_count', ())
+            or getattr(a, '_recursive_smarts', None) or getattr(a, '_excluded_elements', None)
             for _, a in self.atoms()
         )
+
+    def _precompute_recursive(self, other):
+        """Precompute allowed molecule atoms for each query atom with recursive SMARTS constraints.
+
+        Returns dict {query_atom_n: set_of_allowed_molecule_atoms} or None.
+        """
+        recursive_scope = {}
+        for n, a in self.atoms():
+            rs = getattr(a, '_recursive_smarts', None)
+            if not rs:
+                continue
+            allowed = None
+            for positive, sub_query, root in rs:
+                root_matches = set()
+                for m in sub_query.get_mapping(other, automorphism_filter=False):
+                    root_matches.add(m[root])
+                if positive:
+                    if allowed is None:
+                        allowed = root_matches
+                    else:
+                        allowed &= root_matches
+                else:
+                    if allowed is None:
+                        allowed = set(other._atoms) - root_matches
+                    else:
+                        allowed -= root_matches
+            if allowed is not None:
+                recursive_scope[n] = allowed
+        return recursive_scope or None
 
     def get_mapping(self, other: 'MoleculeContainer', /, *, automorphism_filter: bool = True,
                     searching_scope: Optional[Collection[int]] = None, _cython=True):
@@ -606,7 +638,7 @@ def _get_automorphism_mapping(atoms: Dict[int, int], bonds: Dict[int, Dict[int, 
             yield mapping
 
 
-def _get_mapping(linear_query, query_closures, o_atoms, o_bonds, scope):
+def _get_mapping(linear_query, query_closures, o_atoms, o_bonds, scope, recursive_scope=None):
     size = len(linear_query) - 1
     order_depth = {v[0]: k for k, v in enumerate(linear_query)}
 
@@ -617,7 +649,7 @@ def _get_mapping(linear_query, query_closures, o_atoms, o_bonds, scope):
 
     s_n, _, s_atom, _ = linear_query[0]
     for n, o_atom in o_atoms.items():
-        if n in scope and s_atom == o_atom:
+        if n in scope and _recursive_ok(recursive_scope, s_n, n) and s_atom == o_atom:
             stack.append((n, 0))
 
     while stack:
@@ -642,7 +674,7 @@ def _get_mapping(linear_query, query_closures, o_atoms, o_bonds, scope):
 
             for o_n, o_bond in o_bonds[n].items():
                 if o_n in scope and o_n not in reversed_mapping and s_bond == o_bond:
-                    if s_atom == o_atoms[o_n]:
+                    if _recursive_ok(recursive_scope, s_n, o_n) and s_atom == o_atoms[o_n]:
                         # check closures equality
                         o_closures = o_bonds[o_n].keys() & reversed_mapping.keys()
                         o_closures.discard(n)
@@ -650,6 +682,11 @@ def _get_mapping(linear_query, query_closures, o_atoms, o_bonds, scope):
                             obon = o_bonds[o_n]
                             if all(bond == obon[mapping[m]] for m, bond in query_closures[s_n]):
                                 stack.append((o_n, depth))
+
+
+def _recursive_ok(recursive_scope, s_n, o_n):
+    """Check if molecule atom o_n is allowed for query atom s_n given recursive constraints."""
+    return recursive_scope is None or s_n not in recursive_scope or o_n in recursive_scope[s_n]
 
 
 def _compile_query(atoms, bonds):

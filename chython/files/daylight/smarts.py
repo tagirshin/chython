@@ -84,6 +84,8 @@ def smarts(data: str):
         mapping[i] = n = a.pop('parsed_mapping', 0) or next(global_free_masked if a.get('masked') else free)
         e = a.pop('element')
         charge_not = a.pop('charge_not', None)
+        recursive_smarts_raw = a.pop('recursive_smarts', None)
+        excluded_elements = a.pop('excluded_elements', None)
         if isinstance(e, int):
             e = QueryElement.from_atomic_number(e)
         elif isinstance(e, str):
@@ -93,6 +95,15 @@ def smarts(data: str):
         g.add_atom(e(**a), n)
         if charge_not:
             g.atom(n)._charge_not = charge_not
+        if excluded_elements:
+            g.atom(n)._excluded_elements = excluded_elements
+        if recursive_smarts_raw:
+            compiled = []
+            for positive, inner_str in recursive_smarts_raw:
+                sub_query = smarts(inner_str)
+                root = next(iter(sub_query))
+                compiled.append((positive, sub_query, root))
+            g.atom(n)._recursive_smarts = compiled
 
     for n, m, b in parsed['bonds']:
         if n in stereo_bonds and m in stereo_bonds:

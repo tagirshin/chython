@@ -58,7 +58,7 @@ def test_smarts_tokenize_atom():
     assert smarts_tokenize('[#1]') == [(0, {'element': 1})]
     assert smarts_tokenize('[C;h1;@]') == [(0, {'element': 'C', 'implicit_hydrogens': [1], 'stereo': True})]
     assert smarts_tokenize('[O;z1,z2;x1]') == [(0, {'element': 'O', 'heteroatoms': [1], 'hybridization': [1, 2]})]
-    assert smarts_tokenize('[Se;a;D1,D2;r4,r7:3]') == [(0, {'parsed_mapping': 3, 'element': 'Se', 'hybridization': 4, 'neighbors': [1, 2], 'ring_sizes': [4, 7]})]
+    assert smarts_tokenize('[Se;a;D1,D2;r4,r7:3]') == [(8, {'parsed_mapping': 3, 'element': 'Se', 'hybridization': 4, 'neighbors': [1, 2], 'ring_sizes': [4, 7]})]
     assert smarts_tokenize('[Cl;M]') == [(0, {'element': 'Cl', 'masked': True})]
     assert smarts_tokenize('[A:1]') == [(0, {'parsed_mapping': 1, 'element': 'A'})]
     assert smarts_tokenize('[M]') == [(0, {'element': 'M'})]
