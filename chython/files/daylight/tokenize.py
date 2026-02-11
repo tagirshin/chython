@@ -54,6 +54,7 @@ iso_re = compile(r'^[0-9]+')
 chg_re = compile(r'[+-][1-4+-]?')
 mpp_re = compile(r':[1-9][0-9]*$')
 str_re = compile(r'@[@?]?')
+not_charge_re = compile(r'![+-]')
 
 replace_dict = {'-': 1, '=': 2, '#': 3, ':': 4, '~': 8}
 not_dict = {'-': [2, 3, 4], '=': [1, 3, 4], '#': [1, 2, 4], ':': [1, 2, 3]}
@@ -235,6 +236,12 @@ def _tokenize(smiles):
                 tokens.append((token_type, token))
             token_type = 0
             token = s
+        elif s == '*':  # any atom wildcard
+            if token:
+                tokens.append((token_type, token))
+                token = None
+            token_type = 0
+            tokens.append((0, 'A'))
         elif token_type == 0:
             if s == 'l':
                 if token == 'C':
@@ -314,7 +321,20 @@ def _query_parse(token):
     if isotope := match(iso_re, token):
         token = token[isotope.end():]  # remove isotope substring
         out['isotope'] = int(isotope.group())
-    if charge := search(chg_re, token):
+    # Handle negated charges (!+ / !-) before regular charge
+    charge_nots = set()
+    while nc := search(not_charge_re, token):
+        symbol = token[nc.start() + 1]
+        token = token[:nc.start()] + token[nc.end():]
+        charge_nots.add(symbol)
+    if charge_nots:
+        if len(charge_nots) == 2:  # both !+ and !- → must be zero
+            out['charge'] = 0
+        elif '+' in charge_nots:
+            out['charge_not'] = 'positive'
+        else:
+            out['charge_not'] = 'negative'
+    elif charge := search(chg_re, token):
         token = token[:charge.start()] + token[charge.end():]  # remove charge substring
         out['charge'] = charge_dict[charge.group()]
 
@@ -336,12 +356,19 @@ def _query_parse(token):
         raise IncorrectSmarts('Empty element')
 
     # Handle lowercase aromatic element symbols (c, n, o, p, s, b, se, te)
+    # Also handle * (any atom) and a (any aromatic atom)
     aromatic_from_symbol = False
     if isinstance(element, str):
-        upper = _aromatic_upper.get(element)
-        if upper:
-            element = upper
+        if element == '*':
+            element = 'A'
+        elif element == 'a':
+            element = 'A'
             aromatic_from_symbol = True
+        else:
+            upper = _aromatic_upper.get(element)
+            if upper:
+                element = upper
+                aromatic_from_symbol = True
     elif isinstance(element, list):
         new_elements = []
         for e in element:
@@ -367,14 +394,16 @@ def _query_parse(token):
             continue
         elif p == '!R':
             out['ring_sizes'] = 0
+        elif p == 'R':  # bare R: in any ring (ring count >= 1)
+            out['rings_count'] = list(range(1, 15))
         elif p == 'M':
             out['masked'] = True
         else:
             p = p.split(',')
             if len(p) != 1 and len({x[0] for x in p}) > 1:
                 raise IncorrectSmarts('Unsupported OR statement')
-            elif (t := p[0][0]) not in ('D', 'h', 'r', 'x', 'z'):
-                raise IncorrectSmarts('Unsupported SMARTS primitive. Use only D, h, r, !R and a.')
+            elif (t := p[0][0]) not in ('D', 'h', 'r', 'x', 'z', 'X', 'R'):
+                raise IncorrectSmarts('Unsupported SMARTS primitive. Use only D, h, r, X, R, !R and a.')
                 # z and x private chython marks for hybridization and heteroatoms count
             try:
                 p = [int(x[1:]) for x in p]
@@ -389,6 +418,10 @@ def _query_parse(token):
                 out['ring_sizes'] = p
             elif t == 'x':
                 out['heteroatoms'] = p
+            elif t == 'X':
+                out['total_connectivity'] = p
+            elif t == 'R':
+                out['rings_count'] = p
             else:  # z
                 out['hybridization'] = p
 

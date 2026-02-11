@@ -286,4 +286,152 @@ def test_daylight_smarts_complex_bicyclic():
     assert cn_double.is_substructure(bicyclic)
     
     ns_double = smarts('[#7]=[#16]')  # N=S double bond
-    assert ns_double.is_substructure(bicyclic) 
+    assert ns_double.is_substructure(bicyclic)
+
+
+# ===== New tests for 5 SMARTS features =====
+
+
+def test_any_atom_wildcard():
+    """Test [*] and bare * parse and match any atom."""
+    # [*] in brackets
+    pattern_bracket = smarts('[*]')
+    assert len(pattern_bracket) == 1
+
+    # bare * outside brackets
+    pattern_bare = smarts('*')
+    assert len(pattern_bare) == 1
+
+    # Match any atom in ethanol
+    ethanol = smiles('CCO')
+    matches_bracket = list(pattern_bracket.get_mapping(ethanol))
+    assert len(matches_bracket) == 3  # C, C, O
+
+    matches_bare = list(pattern_bare.get_mapping(ethanol))
+    assert len(matches_bare) == 3
+
+    # * in context: *-O pattern
+    star_o = smarts('*O')
+    assert star_o.is_substructure(ethanol)
+
+
+def test_any_aromatic_atom():
+    """Test [a] matches any aromatic atom, doesn't match aliphatic."""
+    pattern = smarts('[a]')
+    assert len(pattern) == 1
+
+    # Should match aromatic C in benzene
+    benzene = smiles('c1ccccc1')
+    matches = list(pattern.get_mapping(benzene))
+    assert len(matches) == 6  # all 6 aromatic carbons
+
+    # Should not match aliphatic C in ethane
+    ethane = smiles('CC')
+    matches = list(pattern.get_mapping(ethane))
+    assert len(matches) == 0
+
+    # Should match aromatic N in pyridine
+    pyridine = smiles('c1ccncc1')
+    matches = list(pattern.get_mapping(pyridine))
+    assert len(matches) == 6  # 5 aromatic C + 1 aromatic N
+
+
+def test_total_connectivity():
+    """Test [CX3] matches sp2 carbon (3 total connections), [CX4] matches sp3."""
+    # X4 carbon: 4 total connections (neighbors + implicit H)
+    cx4 = smarts('[C;X4]')
+    ethanol = smiles('CCO')
+    # First C has 1 neighbor (C) + 3 implicit H = 4 total
+    # Second C has 2 neighbors (C, O) + 2 implicit H = 4 total
+    matches = list(cx4.get_mapping(ethanol))
+    assert len(matches) == 2
+
+    # X3 carbon: 3 total connections
+    cx3 = smarts('[C;X3]')
+    # Formaldehyde: C=O, C has 1 neighbor (O) + ... actually let's use acetic acid
+    # In acetaldehyde CH3CHO: the carbonyl C has 2 neighbors (C, O via double bond) + 1 implicit H = 3
+    acetaldehyde = smiles('CC=O')
+    matches = list(cx3.get_mapping(acetaldehyde))
+    assert len(matches) == 1  # only the carbonyl C
+
+    # X4 should not match the carbonyl C
+    cx4_matches = list(cx4.get_mapping(acetaldehyde))
+    assert len(cx4_matches) == 1  # only the methyl C
+
+
+def test_ring_membership():
+    """Test [R], [R0], [R1], [R2] ring membership count."""
+    # [R] matches any atom in a ring
+    r_pattern = smarts('[C;R]')
+    cyclohexane = smiles('C1CCCCC1')
+    matches = list(r_pattern.get_mapping(cyclohexane))
+    assert len(matches) == 6  # all 6 carbons in ring
+
+    # [R] should not match non-ring atom
+    ethane = smiles('CC')
+    matches = list(r_pattern.get_mapping(ethane))
+    assert len(matches) == 0
+
+    # [R0] matches non-ring atom
+    r0_pattern = smarts('[C;R0]')
+    matches = list(r0_pattern.get_mapping(ethane))
+    assert len(matches) == 2  # both carbons not in ring
+
+    matches = list(r0_pattern.get_mapping(cyclohexane))
+    assert len(matches) == 0  # all in ring
+
+    # [R2] matches bridgehead atoms (in 2 rings) - naphthalene
+    r2_pattern = smarts('[#6;R2]')
+    naphthalene = smiles('c1ccc2ccccc2c1')
+    matches = list(r2_pattern.get_mapping(naphthalene))
+    assert len(matches) == 2  # two bridgehead carbons
+
+    # [R1] matches atoms in exactly 1 ring
+    r1_pattern = smarts('[#6;R1]')
+    matches_r1 = list(r1_pattern.get_mapping(naphthalene))
+    assert len(matches_r1) == 8  # 8 non-bridgehead carbons
+
+
+def test_negated_charge():
+    """Test [N;!+] matches neutral N, doesn't match protonated N."""
+    # [N;!+] - nitrogen that is not positively charged
+    n_not_pos = smarts('[N;!+]')
+
+    # Should match neutral nitrogen
+    methylamine = smiles('CN')
+    assert n_not_pos.is_substructure(methylamine)
+
+    # Should NOT match protonated nitrogen
+    ammonium = smiles('C[NH3+]')
+    matches = list(n_not_pos.get_mapping(ammonium))
+    assert len(matches) == 0
+
+    # [O;!-] - oxygen that is not negatively charged
+    o_not_neg = smarts('[O;!-]')
+
+    # Should match neutral oxygen
+    ethanol = smiles('CCO')
+    assert o_not_neg.is_substructure(ethanol)
+
+    # Should NOT match deprotonated oxygen
+    alkoxide = smiles('CC[O-]')
+    matches = list(o_not_neg.get_mapping(alkoxide))
+    assert len(matches) == 0
+
+    # [N;!+;!-] - both negated: must be neutral (charge == 0)
+    n_neutral = smarts('[N;!+;!-]')
+    assert n_neutral.is_substructure(methylamine)
+    assert not n_neutral.is_substructure(ammonium)
+
+
+def test_combined_features():
+    """Test combining multiple new features in one pattern."""
+    # [N;X3;!+;D1] - nitrogen with 3 total connections, not positive, 1 heavy neighbor
+    pattern = smarts('[N;X3;!+;D1]')
+    methylamine = smiles('CN')
+    # N in methylamine: 1 neighbor (C) + 2 implicit H = 3 total, not charged, D1
+    assert pattern.is_substructure(methylamine)
+
+    # Ammonium should NOT match (!+)
+    ammonium = smiles('C[NH3+]')
+    assert not pattern.is_substructure(ammonium)

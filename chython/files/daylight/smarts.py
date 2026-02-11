@@ -83,6 +83,7 @@ def smarts(data: str):
     for i, a in enumerate(parsed['atoms']):
         mapping[i] = n = a.pop('parsed_mapping', 0) or next(global_free_masked if a.get('masked') else free)
         e = a.pop('element')
+        charge_not = a.pop('charge_not', None)
         if isinstance(e, int):
             e = QueryElement.from_atomic_number(e)
         elif isinstance(e, str):
@@ -90,6 +91,8 @@ def smarts(data: str):
         else:
             e = partial(ListElement, e)
         g.add_atom(e(**a), n)
+        if charge_not:
+            g.atom(n)._charge_not = charge_not
 
     for n, m, b in parsed['bonds']:
         if n in stereo_bonds and m in stereo_bonds:

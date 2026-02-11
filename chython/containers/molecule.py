@@ -695,6 +695,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
 
             atom._in_ring = n in atoms_rings_sizes
             atom._ring_sizes = atoms_rings_sizes.get(n) or set()
+            atom._rings_count = len(atoms_rings.get(n, set()))
 
     def calc_implicit(self, n: int):
         """

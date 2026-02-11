@@ -310,6 +310,13 @@ class MoleculeIsomorphism(Isomorphism):
 class QueryIsomorphism(Isomorphism):
     __slots__ = ()
 
+    @cached_property
+    def _has_extended_query(self):
+        return any(
+            getattr(a, '_total_connectivity', ()) or getattr(a, '_rings_count', ())
+            for _, a in self.atoms()
+        )
+
     def get_mapping(self, other: 'MoleculeContainer', /, *, automorphism_filter: bool = True,
                     searching_scope: Optional[Collection[int]] = None, _cython=True):
         """
@@ -325,7 +332,7 @@ class QueryIsomorphism(Isomorphism):
         if not isinstance(other, MoleculeIsomorphism):
             raise TypeError('MoleculeContainer expected')
 
-        if _cython:
+        if _cython and not self._has_extended_query:
             try:  # windows? ;)
                 from ._isomorphism import get_mapping as _cython_get_mapping
             except ImportError:
@@ -463,7 +470,14 @@ class QueryIsomorphism(Isomorphism):
                     else:
                         v3 = 0xffffd00000000000
 
-                    v3 |= 1 << (a.charge + 39)
+                    if getattr(a, '_charge_not', None) == 'positive':
+                        for _c in range(-4, 1):  # charges -4 to 0
+                            v3 |= 1 << (_c + 39)
+                    elif getattr(a, '_charge_not', None) == 'negative':
+                        for _c in range(0, 5):  # charges 0 to +4
+                            v3 |= 1 << (_c + 39)
+                    else:
+                        v3 |= 1 << (a.charge + 39)
 
                     if not a.implicit_hydrogens:
                         v3 |= 0x7c0000000

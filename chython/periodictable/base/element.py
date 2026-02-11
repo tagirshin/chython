@@ -27,7 +27,8 @@ from ...exceptions import ValenceError
 class Element(ABC):
     __slots__ = ('_isotope', '_charge', '_is_radical', '_xy', '_implicit_hydrogens',
                  '_explicit_hydrogens', '_stereo', '_parsed_mapping',
-                 '_neighbors', '_heteroatoms', '_hybridization', '_ring_sizes', '_in_ring', '_extended_stereo')
+                 '_neighbors', '_heteroatoms', '_hybridization', '_ring_sizes', '_in_ring', '_extended_stereo',
+                 '_rings_count')
     __class_cache__ = {}
 
     def __init__(self, isotope: Optional[int] = None, *,
@@ -275,6 +276,13 @@ class Element(ABC):
         """
         return self._in_ring
 
+    @property
+    def rings_count(self) -> int:
+        """
+        Number of SSSR rings the atom belongs to.
+        """
+        return self._rings_count
+
     def __getstate__(self):
         state = {}
         for cls in type(self).__mro__:
@@ -296,6 +304,8 @@ class Element(ABC):
         # Backward compatibility: default for slots added in newer versions
         if not hasattr(self, '_extended_stereo'):
             self._extended_stereo = None
+        if not hasattr(self, '_rings_count'):
+            self._rings_count = 0
 
     def copy(self, full=False, hydrogens=False, stereo=False) -> 'Element':
         """
@@ -316,6 +326,7 @@ class Element(ABC):
             copy._hybridization = self.hybridization
             copy._ring_sizes = self.ring_sizes.copy()
             copy._in_ring = self.in_ring
+            copy._rings_count = getattr(self, '_rings_count', 0)
         else:
             if hydrogens:
                 copy._implicit_hydrogens = self.implicit_hydrogens
