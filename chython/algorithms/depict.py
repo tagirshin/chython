@@ -1727,6 +1727,15 @@ class DepictQuery(Depict):
                                 f'text-anchor="start">{hh}</text>')
                 mask['other'].append(f'           <text x="{x:.2f}" y="{y:.2f}" dx="{dx_nnh:.2f}" '
                                      f'dy="{level + dy_nh:.2f}">{hh}</text>')
+                level += .6 * other_size
+
+            if getattr(atom, '_recursive_smarts', None):
+                rc = f'$({len(atom._recursive_smarts)})'
+                rc_dy = level + dy_nh + .4 * other_size
+                hbrdztns.append(f'        <text x="{x:.2f}" y="{y:.2f}" dx="{dx_nnh}" dy="{rc_dy:.2f}" '
+                                f'text-anchor="start">{rc}</text>')
+                mask['other'].append(f'           <text x="{x:.2f}" y="{y:.2f}" dx="{dx_nnh:.2f}" '
+                                     f'dy="{rc_dy:.2f}">{rc}</text>')
 
         if nghbrs:
             svg.append(f'      <g fill="{query_fill}" font-family="{other_font_style}" font-size="{other_size:.2f}">')

@@ -65,6 +65,8 @@ class Smarts(Smiles):
 
     @cached_method
     def __str__(self: 'QueryContainer'):
+        if self._smarts:
+            return self._smarts
         smiles, order = self._smiles(self._smiles_order(), _return_order=True)
         if (cx := self._format_cxsmiles(order)) is not None:
             smiles.append(' ')

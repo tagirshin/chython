@@ -263,6 +263,23 @@ class ExtendedQuery(Query, ABC):
     def charge_not(self) -> Optional[str]:
         return self._charge_not
 
+    @property
+    def recursive_smarts(self):
+        """Recursive SMARTS constraints on this atom.
+
+        Returns list of (positive: bool, sub_query: QueryContainer, root: int) tuples,
+        or None if no recursive constraints.
+        """
+        return self._recursive_smarts
+
+    @property
+    def excluded_elements(self):
+        """Excluded element constraints (e.g., from !#6 or !N in SMARTS).
+
+        Returns tuple of element symbols/atomic numbers, or None.
+        """
+        return self._excluded_elements
+
     def copy(self, full=False):
         copy = super().copy(full=full)
         copy._charge = self.charge
