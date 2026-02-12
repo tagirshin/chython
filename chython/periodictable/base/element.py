@@ -19,7 +19,7 @@
 from abc import ABC, abstractmethod
 from CachedMethods import class_cached_property
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple, Type
+from typing import Optional
 from .vector import Vector
 from ...exceptions import ValenceError
 
@@ -97,14 +97,14 @@ class Element(ABC):
 
     @property
     @abstractmethod
-    def isotopes_distribution(self) -> Dict[int, float]:
+    def isotopes_distribution(self) -> dict[int, float]:
         """
         Isotopes distribution in earth
         """
 
     @property
     @abstractmethod
-    def isotopes_masses(self) -> Dict[int, float]:
+    def isotopes_masses(self) -> dict[int, float]:
         """
         Isotopes masses
         """
@@ -209,7 +209,7 @@ class Element(ABC):
         return self._xy
 
     @xy.setter
-    def xy(self, value: Tuple[float, float]):
+    def xy(self, value: tuple[float, float]):
         self._xy = Vector(*value)
 
     @property
@@ -263,7 +263,7 @@ class Element(ABC):
         return self._hybridization
 
     @property
-    def ring_sizes(self) -> Set[int]:
+    def ring_sizes(self) -> set[int]:
         """
         Atom rings sizes.
         """
@@ -343,7 +343,7 @@ class Element(ABC):
         return self.copy()
 
     @classmethod
-    def from_symbol(cls, symbol: str) -> Type['Element']:
+    def from_symbol(cls, symbol: str) -> type['Element']:
         """
         get Element class by its symbol
         """
@@ -354,7 +354,7 @@ class Element(ABC):
         return element
 
     @classmethod
-    def from_atomic_number(cls, number: int) -> Type['Element']:
+    def from_atomic_number(cls, number: int) -> type['Element']:
         """
         get Element class by its number
         """
@@ -384,7 +384,7 @@ class Element(ABC):
                      self.implicit_hydrogens or 0, self.in_ring))
 
     def valence_rules(self, valence: int) -> \
-            List[Tuple[Set[Tuple[int, 'Element']], Dict[Tuple[int, 'Element'], int], int]]:
+            list[tuple[set[tuple[int, 'Element']], dict[tuple[int, 'Element'], int], int]]:
         """
         valence rules for element with specific charge/radical state
         """
@@ -395,14 +395,14 @@ class Element(ABC):
 
     @property
     @abstractmethod
-    def _common_valences(self) -> Tuple[int, ...]:
+    def _common_valences(self) -> tuple[int, ...]:
         """
         common valences of element
         """
 
     @property
     @abstractmethod
-    def _valences_exceptions(self) -> Tuple[Tuple[int, bool, int, Tuple[Tuple[int, str], ...]], ...]:
+    def _valences_exceptions(self) -> tuple[tuple[int, bool, int, tuple[tuple[int, str], ...]], ...]:
         """
         exceptions in charges, radical state, implicit H count, and non H neighbors of element
         examples:
@@ -421,7 +421,7 @@ class Element(ABC):
         """
 
     @class_cached_property
-    def _compiled_charge_radical(self) -> Set[Tuple[int, bool]]:
+    def _compiled_charge_radical(self) -> set[tuple[int, bool]]:
         """
         exceptions in charges, radical state
         examples:
@@ -432,7 +432,7 @@ class Element(ABC):
 
     @class_cached_property
     def _compiled_valence_rules(self) -> \
-            Dict[Tuple[int, bool, int], List[Tuple[Set[Tuple[int, int]], Dict[Tuple[int, int], int], int]]]:
+            dict[tuple[int, bool, int], list[tuple[set[tuple[int, int]], dict[tuple[int, int], int], int]]]:
         """
         dictionary with key = (charge, is_radical, sum_of_bonds) and
         value = list of possible neighbors and implicit H count
@@ -472,7 +472,7 @@ class Element(ABC):
         return dict(rules)
 
     @class_cached_property
-    def _compiled_saturation_rules(self) -> List[Tuple[int, bool, int, int, Optional[Dict[Tuple[int, int], int]]]]:
+    def _compiled_saturation_rules(self) -> list[tuple[int, bool, int, int, Optional[dict[tuple[int, int], int]]]]:
         """
         dictionary with key = (charge, is_radical, sum_of_bonds) and
         value = list of possible neighbors

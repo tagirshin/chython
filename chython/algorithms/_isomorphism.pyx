@@ -21,9 +21,6 @@ cimport cython
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.string cimport memset
 
-cdef extern from "Python.h":
-    dict _PyDict_NewPresized(Py_ssize_t minused)
-
 cdef packed struct atom_t:
     unsigned long long bits1
     unsigned long long bits2
@@ -115,7 +112,7 @@ def get_mapping(const unsigned char[::1] q_buffer not None, const unsigned char[
             n = stack_index[stack]
 
             if depth == q_decrement:
-                mapping = _PyDict_NewPresized(query.atoms_count)
+                mapping = {}
                 for i in range(depth):
                     mapping[query.atoms[i].mapping] = molecule.atoms[path[i]].mapping
                 mapping[query.atoms[depth].mapping] = molecule.atoms[n].mapping

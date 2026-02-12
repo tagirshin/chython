@@ -20,7 +20,7 @@ from functools import cached_property
 from itertools import groupby
 from logging import getLogger
 from operator import itemgetter
-from typing import Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 
 logger = getLogger('chython.morgan')
@@ -34,7 +34,7 @@ class Morgan:
     __slots__ = ()
 
     @cached_property
-    def atoms_order(self: 'MoleculeContainer') -> Dict[int, int]:
+    def atoms_order(self: 'MoleculeContainer') -> dict[int, int]:
         """
         Morgan like algorithm for graph nodes ordering
 
@@ -47,14 +47,14 @@ class Morgan:
         return _morgan({n: hash(a) for n, a in self.atoms()}, self.int_adjacency)
 
     @cached_property
-    def int_adjacency(self: 'MoleculeContainer') -> Dict[int, Dict[int, int]]:
+    def int_adjacency(self: 'MoleculeContainer') -> dict[int, dict[int, int]]:
         """
         Adjacency with integer-coded bonds.
         """
         return {n: {m: hash(b) for m, b in mb.items()} for n, mb in self._bonds.items()}
 
 
-def _morgan(atoms: Dict[int, int], bonds: Dict[int, Dict[int, int]]) -> Dict[int, int]:
+def _morgan(atoms: dict[int, int], bonds: dict[int, dict[int, int]]) -> dict[int, int]:
     tries = len(atoms) - 1
     numb = len(set(atoms.values()))
     stab = old_numb = 0

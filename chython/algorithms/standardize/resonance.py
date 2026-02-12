@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import List, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union
 from ...exceptions import ValenceError
 
 
@@ -41,7 +41,7 @@ class Resonance:
     __slots__ = ()
 
     def fix_resonance(self: Union['MoleculeContainer', 'Resonance'], *, logging=False,
-                      _fix_stereo=True) -> Union[bool, List[int]]:
+                      _fix_stereo=True) -> Union[bool, list[int]]:
         """
         Transform biradical or dipole resonance structures into neutral form. Return True if structure form changed.
 

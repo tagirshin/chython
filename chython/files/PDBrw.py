@@ -20,7 +20,8 @@ from fileinput import FileInput
 from io import StringIO, TextIOWrapper
 from itertools import islice
 from pathlib import Path
-from typing import Optional, Sequence, Iterator, List
+from typing import Optional
+from collections.abc import Sequence, Iterator
 from .xyz import xyz
 from ..containers import MoleculeContainer
 from ..exceptions import BufferOverflow
@@ -83,7 +84,7 @@ class PDBRead:
         self.__buffer_size = buffer_size
         self.__tell = 0
 
-    def read(self, amount: Optional[int] = None) -> List[MoleculeContainer]:
+    def read(self, amount: Optional[int] = None) -> list[MoleculeContainer]:
         """
         Parse whole file
 
@@ -233,7 +234,7 @@ class PDBRead:
     def __next__(self) -> MoleculeContainer:
         return next(iter(self))
 
-    def _read_block(self, *, current=True) -> List[str]:
+    def _read_block(self, *, current=True) -> list[str]:
         if current and self.__buffer:
             return self.__buffer
         self.__buffer = None

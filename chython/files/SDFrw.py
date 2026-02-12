@@ -22,7 +22,7 @@ from pickle import dump
 from re import compile, match
 from subprocess import check_output
 from sys import platform
-from typing import Optional, List
+from typing import Optional
 from .mdl import MDLRead, MOLWrite, EMOLWrite, parse_mol_v2000, parse_mol_v3000, postprocess_molecule
 from ._convert import create_molecule
 from ._mapping import postprocess_parsed_molecule
@@ -116,7 +116,7 @@ class SDFRead(MDLRead):
         else:
             raise NotImplementedError('Indexable supported in unix-like o.s. and for files stored on disk')
 
-    def _read_block(self, *, current=True) -> List[str]:
+    def _read_block(self, *, current=True) -> list[str]:
         if current and self._buffer:
             return self._buffer
         self.__m_end = m_end = None
@@ -137,7 +137,7 @@ class SDFRead(MDLRead):
             raise EOFError
         return buffer
 
-    def _read_mol(self, *, current: bool = True) -> List[str]:
+    def _read_mol(self, *, current: bool = True) -> list[str]:
         data = self._read_block(current=current)
         if not self.__m_end:
             raise InvalidMolBlock

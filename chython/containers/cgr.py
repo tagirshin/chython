@@ -18,7 +18,8 @@
 #
 from collections import defaultdict
 from functools import cached_property
-from typing import Dict, Iterator, Tuple, Optional, List, Union
+from typing import Optional, Union
+from collections.abc import Iterator
 
 from .bonds import DynamicBond, Bond
 from . import cgr_query as query
@@ -37,20 +38,20 @@ from ..exceptions import MappingError, AtomNotFound, BondNotFound
 
 class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorphism, FingerprintsCGR):
     __slots__ = ('_atoms', '_bonds', '_conformers', '_charges', '_radicals', '_p_charges', '_p_radicals', '_hybridizations', '_p_hybridizations', '_plane', '__dict__')
-    _atoms: Dict[int, DynamicElement]
-    _bonds: Dict[int, Dict[int, DynamicBond]]
+    _atoms: dict[int, DynamicElement]
+    _bonds: dict[int, dict[int, DynamicBond]]
 
     def __init__(self):
-        self._atoms: Dict[int, DynamicElement] = {}
-        self._bonds: Dict[int, Dict[int, DynamicBond]] = {}
-        self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
-        self._charges: Dict[int, int] = {}
-        self._radicals: Dict[int, bool] = {}
-        self._p_charges: Dict[int, int] = {}
-        self._p_radicals: Dict[int, bool] = {}
-        self._hybridizations: Dict[int, int] = {}
-        self._p_hybridizations: Dict[int, int] = {}
-        self._plane: Dict[int, Tuple[float, float]] = {}
+        self._atoms: dict[int, DynamicElement] = {}
+        self._bonds: dict[int, dict[int, DynamicBond]] = {}
+        self._conformers: list[dict[int, tuple[float, float, float]]] = []
+        self._charges: dict[int, int] = {}
+        self._radicals: dict[int, bool] = {}
+        self._p_charges: dict[int, int] = {}
+        self._p_radicals: dict[int, bool] = {}
+        self._hybridizations: dict[int, int] = {}
+        self._p_hybridizations: dict[int, int] = {}
+        self._plane: dict[int, tuple[float, float]] = {}
         self.flush_cache()
 
     def _sync_plane_to_atoms(self):
@@ -98,10 +99,10 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
             raise TypeError(f"is_radical must be a boolean, got {type(is_radical)}")
         return is_radical
 
-    def atoms(self) -> Iterator[Tuple[int, DynamicElement]]:
+    def atoms(self) -> Iterator[tuple[int, DynamicElement]]:
         return iter(self._atoms.items())
 
-    def bonds(self) -> Iterator[Tuple[int, int, DynamicBond]]:
+    def bonds(self) -> Iterator[tuple[int, int, DynamicBond]]:
         """
         Iterate other all bonds
         """
@@ -112,7 +113,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
                 if m not in seen:
                     yield n, m, bond
 
-    def neighbors(self, n: int) -> Tuple[int, int]:
+    def neighbors(self, n: int) -> tuple[int, int]:
         """number of neighbors atoms excluding any-bonded"""
         s = p = 0
         for b in self._bonds[n].values():
@@ -228,7 +229,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         self._calc_hybridization(m)
         self.flush_cache()
 
-    def remap(self, mapping: Dict[int, int], *, copy=False):
+    def remap(self, mapping: dict[int, int], *, copy=False):
         target = self.copy() if copy else self
 
         if len(mapping) != len(set(mapping.values())) or \
@@ -398,7 +399,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         sb = self._bonds
 
         bonds = []
-        adj: Dict[int, Dict[int, List[Optional[int]]]] = defaultdict(lambda: defaultdict(lambda: [None, None]))
+        adj: dict[int, dict[int, list[Optional[int]]]] = defaultdict(lambda: defaultdict(lambda: [None, None]))
         h = self.__class__()
         atoms = h._atoms
 
@@ -525,7 +526,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
             return super().get_mcs_mapping(other, **kwargs)
         raise TypeError('CGRContainer expected')
 
-    def decompose(self) -> Tuple['molecule.MoleculeContainer', 'molecule.MoleculeContainer']:
+    def decompose(self) -> tuple['molecule.MoleculeContainer', 'molecule.MoleculeContainer']:
         """
         decompose CGR to pair of Molecules, which represents reactants and products state of reaction
 
@@ -616,7 +617,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         return self.union(other, remap=True, copy=False)
     
     @cached_property
-    def center_atoms(self) -> Tuple[int, ...]:
+    def center_atoms(self) -> tuple[int, ...]:
         """ Get list of atoms of reaction center (atoms with dynamic: bonds, charges, radicals).
         """
         charges = self._charges
@@ -630,12 +631,12 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         return tuple(center)
 
     @cached_property
-    def center_bonds(self) -> Tuple[Tuple[int, int], ...]:
+    def center_bonds(self) -> tuple[tuple[int, int], ...]:
         """Get list of bonds of reaction center (bonds with dynamic orders)."""
         return tuple((n, m) for n, m, bond in self.bonds() if bond.is_dynamic)
 
     @cached_property
-    def centers_list(self) -> Tuple[Tuple[int, ...], ...]:
+    def centers_list(self) -> tuple[tuple[int, ...], ...]:
         """Get a list of atom groups for each reaction center component."""
         center = set(self.center_atoms)
         adj = defaultdict(set)
@@ -687,7 +688,7 @@ class CGRContainer(CGRSmiles, DepictCGR, Calculate2DCGR, Morgan, Rings, Isomorph
         return tuple(out)
 
     @cached_property
-    def aromatic_rings(self) -> Tuple[Tuple[int, ...], ...]:
+    def aromatic_rings(self) -> tuple[tuple[int, ...], ...]:
         """Existing or formed aromatic rings atoms numbers."""
         bonds = self._bonds
         return tuple(

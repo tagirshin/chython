@@ -21,10 +21,6 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from libc.math cimport sqrt
 
 
-cdef extern from "Python.h":
-    dict _PyDict_NewPresized(Py_ssize_t minused)
-
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def possible_bonds(double[:, ::1] xyz not None, double[::1] radii not None, double multiplier):
@@ -55,7 +51,7 @@ def possible_bonds(double[:, ::1] xyz not None, double[::1] radii not None, doub
         ns[n] = c
 
     # prepare dict of dicts
-    py_bonds = _PyDict_NewPresized(size)
+    py_bonds = {}
     for n in range(size):
         py_bonds[n + 1] = {}
 

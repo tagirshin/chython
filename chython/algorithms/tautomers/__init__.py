@@ -18,7 +18,8 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import deque
-from typing import TYPE_CHECKING, Iterator, Union
+from typing import TYPE_CHECKING, Union
+from collections.abc import Iterator
 from .acid_base import *
 from .heteroarenes import *
 from .keto_enol import *

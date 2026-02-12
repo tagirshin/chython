@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from chython import Reactor, ReactionContainer, smarts
-from typing import Iterator
+from collections.abc import Iterator
 from ._amidation import template as amidation_template
 from ._aryl_amination import template as aryl_amination_template
 from ._mitsunobu import template as mitsunobu_template

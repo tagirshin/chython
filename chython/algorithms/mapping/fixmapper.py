@@ -18,7 +18,7 @@
 #
 from collections import ChainMap
 from itertools import count
-from typing import List, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union
 from ._reactions import rules
 
 
@@ -30,7 +30,7 @@ class FixMapper:
     __slots__ = ()
 
     def fix_mapping(self: 'ReactionContainer', *, logging: bool = False) -> \
-            Union[bool, List[Tuple[int, str, Tuple[int, ...]]]]:
+            Union[bool, list[tuple[int, str, tuple[int, ...]]]]:
         """
         Fix mapping by using loaded rules.
         """

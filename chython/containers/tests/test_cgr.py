@@ -12,7 +12,7 @@ from chython.periodictable.base.element import Element
 from chython.periodictable import C
 from chython.exceptions import AtomNotFound, BondNotFound
 # Explicitly import some elements to ensure periodictable __init__ runs fully
-from chython.periodictable import C, O, N 
+from chython.periodictable import C 
 from chython.containers.bonds import DynamicBond
 
 # Helper function to create a CGRContainer for testing

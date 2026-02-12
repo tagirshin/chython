@@ -19,7 +19,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
-from typing import List, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union
 from ._reagents import *
 from ...exceptions import MappingError
 
@@ -32,7 +32,7 @@ class StandardizeReaction:
     __slots__ = ()
 
     def canonicalize(self: 'ReactionContainer', *, fix_mapping: bool = True, logging=False, fix_tautomers=True) -> \
-            Union[bool, List[Tuple[int, Tuple[int, ...], int, str]]]:
+            Union[bool, list[tuple[int, tuple[int, ...], int, str]]]:
         """
         Convert molecules to canonical forms of functional groups and aromatic rings without explicit hydrogens.
         Return True if in any molecule found not canonical group.
@@ -56,7 +56,7 @@ class StandardizeReaction:
         return bool(total)
 
     def standardize(self: 'ReactionContainer', *, fix_mapping: bool = True, logging=False, fix_tautomers=True) -> \
-            Union[bool, List[Tuple[int, Tuple[int, ...], int, str]]]:
+            Union[bool, list[tuple[int, tuple[int, ...], int, str]]]:
         """
         Fix functional groups representation.
         Return True if in any molecule fixed group.
@@ -133,7 +133,7 @@ class StandardizeReaction:
             m.clean_stereo()
         self.flush_cache(keep_molecule_cache=True)
 
-    def check_valence(self: 'ReactionContainer') -> List[Tuple[int, Tuple[int, ...]]]:
+    def check_valence(self: 'ReactionContainer') -> list[tuple[int, tuple[int, ...]]]:
         """
         Check valences of all atoms of all molecules.
 

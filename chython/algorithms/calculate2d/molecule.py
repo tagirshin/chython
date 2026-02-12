@@ -19,7 +19,7 @@
 #
 from math import sqrt
 from random import random
-from typing import TYPE_CHECKING, Union, Dict, Literal
+from typing import TYPE_CHECKING, Union, Literal
 from ...exceptions import ImplementationError
 from ...periodictable.base.vector import Vector
 
@@ -52,8 +52,8 @@ if MiniRacer is not None:
 
 class Calculate2DMolecule:
     __slots__ = ()
-    _atoms: Dict[int, 'Element']
-    _bonds: Dict[int, Dict[int, 'Bond']]
+    _atoms: dict[int, 'Element']
+    _bonds: dict[int, dict[int, 'Bond']]
 
     def clean2d(self: Union['MoleculeContainer', 'Calculate2DMolecule'],
                 *, engine: Literal['rdkit', 'smilesdrawer'] = None):

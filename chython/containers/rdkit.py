@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 from ..periodictable import Element
 
 
@@ -28,7 +28,7 @@ class RDkit:
     __slots__ = ()
 
     @classmethod
-    def from_rdkit(cls: Type['MoleculeContainer'], data):
+    def from_rdkit(cls: type['MoleculeContainer'], data):
         """
         RDKit molecule object to MoleculeContainer converter
         """

@@ -1,4 +1,4 @@
-from typing import List, Union, Tuple, Dict
+from typing import Union
 from . import cgr  # cyclic imports resolve
 from .bonds import Bond, DynamicBond
 from .graph import Graph
@@ -13,15 +13,15 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
     __slots__ = ('_p_charges', '_p_radicals', '_neighbors', '_hybridizations', '_p_neighbors', '_p_hybridizations', '_plane', '_charges', '_radicals')
 
     def __init__(self):
-        self._p_charges: Dict[int, int] = {}
-        self._p_radicals: Dict[int, bool] = {}
-        self._neighbors: Dict[int, Tuple[int, ...]] = {}
-        self._hybridizations: Dict[int, Tuple[int, ...]] = {}
-        self._p_neighbors: Dict[int, Tuple[int, ...]] = {}
-        self._p_hybridizations: Dict[int, Tuple[int, ...]] = {}
-        self._plane: Dict[int, Tuple[float, float]] = {}
-        self._charges: Dict[int, int] = {}
-        self._radicals: Dict[int, bool] = {}
+        self._p_charges: dict[int, int] = {}
+        self._p_radicals: dict[int, bool] = {}
+        self._neighbors: dict[int, tuple[int, ...]] = {}
+        self._hybridizations: dict[int, tuple[int, ...]] = {}
+        self._p_neighbors: dict[int, tuple[int, ...]] = {}
+        self._p_hybridizations: dict[int, tuple[int, ...]] = {}
+        self._plane: dict[int, tuple[float, float]] = {}
+        self._charges: dict[int, int] = {}
+        self._radicals: dict[int, bool] = {}
         super().__init__()
 
     def _validate_charge(self, charge: int) -> int:
@@ -36,10 +36,10 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
 
     def add_atom(self, atom: Union[AnyAtom, int, str], *args,
                  p_charge: int = 0, p_is_radical: bool = False,
-                 neighbors: Union[int, List[int], Tuple[int, ...], None] = None,
-                 hybridization: Union[int, List[int], Tuple[int, ...], None] = None,
-                 p_neighbors: Union[int, List[int], Tuple[int, ...], None] = None,
-                 p_hybridization: Union[int, List[int], Tuple[int, ...], None] = None, **kwargs):
+                 neighbors: Union[int, list[int], tuple[int, ...], None] = None,
+                 hybridization: Union[int, list[int], tuple[int, ...], None] = None,
+                 p_neighbors: Union[int, list[int], tuple[int, ...], None] = None,
+                 p_hybridization: Union[int, list[int], tuple[int, ...], None] = None, **kwargs):
         xy_coord = kwargs.pop('xy', None)
         neighbors = self._validate_neighbors(neighbors)
         p_neighbors = self._validate_neighbors(p_neighbors)
@@ -323,7 +323,7 @@ class QueryCGRContainer(Graph, QueryCGRSmiles, DepictQueryCGR, Calculate2DCGR):
                 atom.xy = self._plane[n]
 
     @property
-    def atoms_order(self) -> Dict[int, int]:
+    def atoms_order(self) -> dict[int, int]:
         """
         Lightweight order mapping for SMILES generation when Morgan is absent.
         """

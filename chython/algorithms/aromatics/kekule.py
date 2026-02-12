@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict, deque
-from typing import List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Optional, TYPE_CHECKING, Union
 from ._rules import rules
 from ..._functions import lazy_product
 from ...exceptions import InvalidAromaticRing
@@ -358,7 +358,7 @@ class Kekule:
 
 def _kekule_component(rings, double_bonded, pyrroles, buffer_size):
     # (current atom, previous atom, bond between cp atoms, path deep for cutting [None if cut impossible])
-    stack: List[List[Tuple[int, int, int, Optional[int]]]]
+    stack: list[list[tuple[int, int, int, Optional[int]]]]
     if double_bonded:  # start from double bonded if exists
         start = next(iter(double_bonded))
         stack = [[(next(iter(rings[start])), start, 1, 0)]]

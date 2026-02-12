@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from CachedMethods import cached_method
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 from .smiles import Smiles, charge_str, order_str
 
 if TYPE_CHECKING:

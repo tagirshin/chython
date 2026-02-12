@@ -18,7 +18,7 @@
 #
 from functools import partial
 from itertools import count
-from re import compile, findall, search
+from re import compile, findall
 from .parser import parser
 from .tokenize import smarts_tokenize
 from ...containers import QueryContainer, QueryBond

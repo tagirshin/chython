@@ -24,7 +24,7 @@ from functools import partial
 from math import atan2, sin, cos, hypot
 from os.path import join
 from tempfile import TemporaryDirectory
-from typing import Tuple, TYPE_CHECKING, Union, Literal
+from typing import TYPE_CHECKING, Union, Literal
 from uuid import uuid4
 from zlib import compress
 
@@ -170,8 +170,8 @@ def _render_aromatic_bond(n_x, n_y, m_x, m_y, c_x, c_y):
 def depict_settings(*, carbon: bool | None = None, aam: bool | None = None, monochrome: bool | None = None,
                     bond_color: str | None = None, aam_color: str | None = None, atoms_colors: tuple | None = None,
                     bond_width: float | None = None, wedge_space: float | None = None,
-                    dashes: Tuple[float, float] | None = None,
-                    aromatic_dashes: Tuple[float, float] | None = None,
+                    dashes: tuple[float, float] | None = None,
+                    aromatic_dashes: tuple[float, float] | None = None,
                     dx_ci: float | None = None, dy_ci: float | None = None,
                     dx_m: float | None = None, dy_m: float | None = None,
                     span_dy: float | None = None, double_space: float | None = None,

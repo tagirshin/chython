@@ -16,16 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import Iterator
-from ._amidation import template as amidation_template
-from ._amine_isocyanate import template as amine_isocyanate_template
-from ._buchwald_hartwig import template as buchwald_hartwig_template
-from ._esterification import template as esterification_template
-from ._macmillan import template as macmillan_template
-from ._reductive_amination import template as reductive_amination_template
-from ._sonogashira import template as sonogashira_template
-from ._sulfonamidation import template as sulfonamidation_template
-from ._suzuki_miyaura import template as suzuki_miyaura_template
+from collections.abc import Iterator
 from ..transformer import Transformer
 from ... import MoleculeContainer, smarts
 from ...periodictable import At

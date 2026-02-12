@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from itertools import chain, repeat
-from typing import List, Tuple, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union
 from ._groups import *
 
 
@@ -29,7 +29,7 @@ class GroupsFix:
     __slots__ = ()
 
     def fix_groups_mapping(self: 'ReactionContainer', *, logging: bool = False) -> \
-            Union[bool, List[Tuple[str, Tuple[int, ...]]]]:
+            Union[bool, list[tuple[str, tuple[int, ...]]]]:
         """
         Fix atom-to-atom mapping of some functional groups. Return True if found AAM errors.
         """

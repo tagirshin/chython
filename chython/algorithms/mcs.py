@@ -18,14 +18,14 @@
 #
 from collections import defaultdict
 from itertools import product, combinations, islice
-from typing import Dict, Set, Iterator, Tuple
+from collections.abc import Iterator
 from ..containers import molecule
 
 
 class MCS:
     __slots__ = ()
 
-    def get_mcs_mapping(self, other: 'molecule.MoleculeContainer', /, *, limit=10000) -> Iterator[Dict[int, int]]:
+    def get_mcs_mapping(self, other: 'molecule.MoleculeContainer', /, *, limit=10000) -> Iterator[dict[int, int]]:
         """
         Find maximum common substructure. Based on clique searching in product graph.
 
@@ -157,7 +157,7 @@ class MCS:
         return core_product, full_product
 
 
-def _clique(graph) -> Iterator[Set[Tuple[int, int]]]:
+def _clique(graph) -> Iterator[set[tuple[int, int]]]:
     """
     clique search
 

@@ -20,7 +20,7 @@ from collections import defaultdict
 from functools import cached_property
 from itertools import combinations, product
 from logging import getLogger, INFO
-from typing import Dict, Set, Tuple, Union, List, Optional, TYPE_CHECKING
+from typing import Union, Optional, TYPE_CHECKING
 from .morgan import _morgan
 from ..exceptions import AtomNotFound, IsChiral, NotChiral
 
@@ -162,7 +162,7 @@ class MoleculeStereo:
         self.flush_cache(keep_sssr=True, keep_components=True, keep_special_connectivity=True)
 
     @cached_property
-    def tetrahedrons(self: 'MoleculeContainer') -> Tuple[int, ...]:
+    def tetrahedrons(self: 'MoleculeContainer') -> tuple[int, ...]:
         """
         Carbon sp3 atom numbers.
         """
@@ -177,7 +177,7 @@ class MoleculeStereo:
         return tuple(tetra)
 
     @cached_property
-    def cumulenes(self: 'MoleculeContainer') -> List[Tuple[int, ...]]:
+    def cumulenes(self: 'MoleculeContainer') -> list[tuple[int, ...]]:
         """
         All double-bonds chains (e.g. alkenes, allenes, cumulenes).
         """
@@ -215,7 +215,7 @@ class MoleculeStereo:
         return cumulenes
 
     @cached_property
-    def stereogenic_tetrahedrons(self: 'MoleculeContainer') -> Dict[int, Union[Tuple[int, int, int], Tuple[int, int, int, int]]]:
+    def stereogenic_tetrahedrons(self: 'MoleculeContainer') -> dict[int, Union[tuple[int, int, int], tuple[int, int, int, int]]]:
         """
         Tetrahedrons which contains at least 3 non-hydrogen neighbors and corresponding neighbors order.
         """
@@ -236,7 +236,7 @@ class MoleculeStereo:
         return tetrahedrons
 
     @cached_property
-    def stereogenic_cumulenes(self: 'MoleculeContainer') -> Dict[Tuple[int, ...], Tuple[int, int, Optional[int], Optional[int]]]:
+    def stereogenic_cumulenes(self: 'MoleculeContainer') -> dict[tuple[int, ...], tuple[int, int, Optional[int], Optional[int]]]:
         """
         Cumulenes which contains at least one non-hydrogen neighbor on both ends and corresponding neighbors order.
         """
@@ -267,14 +267,14 @@ class MoleculeStereo:
         return cumulenes
 
     @cached_property
-    def stereogenic_allenes(self) -> Dict[int, Tuple[int, int, Optional[int], Optional[int]]]:
+    def stereogenic_allenes(self) -> dict[int, tuple[int, int, Optional[int], Optional[int]]]:
         """
         Allenes which contains at least one non-hydrogen neighbor on both ends and corresponding neighbors order.
         """
         return {path[len(path) // 2]: env for path, env in self.stereogenic_cumulenes.items() if len(path) % 2}
 
     @cached_property
-    def stereogenic_cis_trans(self) -> Dict[Tuple[int, int], Tuple[int, int, Optional[int], Optional[int]]]:
+    def stereogenic_cis_trans(self) -> dict[tuple[int, int], tuple[int, int, Optional[int], Optional[int]]]:
         """
         Cis-trans bonds which contains at least one non-hydrogen neighbor on both ends and corresponding neighbors order.
         """
@@ -286,7 +286,7 @@ class MoleculeStereo:
         return stereo
 
     @cached_property
-    def ring_tetrahedrons(self: 'MoleculeContainer') -> Dict[int, Union[Tuple[int, int], Tuple[int], Tuple]]:
+    def ring_tetrahedrons(self: 'MoleculeContainer') -> dict[int, Union[tuple[int, int], tuple[int], tuple]]:
         """
         Tetrahedrons in rings, except ring-linkers. Values are non-ring atoms.
         """
@@ -301,7 +301,7 @@ class MoleculeStereo:
         return out
 
     @cached_property
-    def rings_linker_tetrahedrons(self: 'MoleculeContainer') -> Dict[int, Tuple[int, int, int, int]]:
+    def rings_linker_tetrahedrons(self: 'MoleculeContainer') -> dict[int, tuple[int, int, int, int]]:
         """
         A dictionary where the keys are tetrahedron atoms shared between two rings (not condensed rings) and the values
         are tuples representing their neighbors in the first and second rings respectively.
@@ -319,7 +319,7 @@ class MoleculeStereo:
         return out
 
     @cached_property
-    def ring_cumulenes_terminals(self: 'MoleculeContainer') -> Set[Tuple[int, int]]:
+    def ring_cumulenes_terminals(self: 'MoleculeContainer') -> set[tuple[int, int]]:
         """
         Terminal atoms of inside ring cumulenes.
         """
@@ -331,7 +331,7 @@ class MoleculeStereo:
         return out
 
     @cached_property
-    def rings_linker_cumulenes_terminals(self: 'MoleculeContainer') -> Dict[Tuple[int, int], Tuple[int, int, int, int]]:
+    def rings_linker_cumulenes_terminals(self: 'MoleculeContainer') -> dict[tuple[int, int], tuple[int, int, int, int]]:
         """
         Terminal atoms of cumulenes connecting two rings. Values are neighbors in first and second rings.
         """
@@ -344,7 +344,7 @@ class MoleculeStereo:
         return out
 
     @cached_property
-    def ring_attached_cumulenes(self: 'MoleculeContainer') -> Dict[Tuple[int, int], Union[Tuple[int, int], Tuple[int]]]:
+    def ring_attached_cumulenes(self: 'MoleculeContainer') -> dict[tuple[int, int], Union[tuple[int, int], tuple[int]]]:
         """
         Cumulenes attached to rings from one side. Values are out of ring neighbor atoms.
         """
@@ -366,21 +366,21 @@ class MoleculeStereo:
         return out
 
     @property
-    def chiral_tetrahedrons(self) -> Set[int]:
+    def chiral_tetrahedrons(self) -> set[int]:
         """
         Chiral tetrahedrons except already labeled ones.
         """
         return self.__chiral_centers[0]
 
     @property
-    def chiral_cis_trans(self) -> Set[Tuple[int, int]]:
+    def chiral_cis_trans(self) -> set[tuple[int, int]]:
         """
         Chiral cis-trans bonds except already labeled ones.
         """
         return self.__chiral_centers[1]
 
     @property
-    def chiral_allenes(self) -> Set[int]:
+    def chiral_allenes(self) -> set[int]:
         """
         Chiral allenes except already labeled ones.
         """
@@ -491,7 +491,7 @@ class MoleculeStereo:
         if flag and clean_cache:
             self.flush_cache(keep_components=True, keep_sssr=True, keep_special_connectivity=True)
 
-    def add_atom_stereo(self: 'MoleculeContainer', n: int, env: Tuple[int, ...], mark: bool, *, clean_cache=True):
+    def add_atom_stereo(self: 'MoleculeContainer', n: int, env: tuple[int, ...], mark: bool, *, clean_cache=True):
         """
         Add stereo data for specified neighbors bypass. Use it for tetrahedrons or allenes.
 
@@ -635,7 +635,7 @@ class MoleculeStereo:
         return sum(b.stereo is not None for *_, b in self.bonds())
 
     @cached_property
-    def _stereo_cis_trans_centers(self) -> Dict[int, Tuple[int, int]]:
+    def _stereo_cis_trans_centers(self) -> dict[int, tuple[int, int]]:
         """
         Cis-Trans terminal atoms to cis-trans key mapping. Key is central double bond in a cumulene chain.
         """
@@ -649,7 +649,7 @@ class MoleculeStereo:
         return terminals
 
     @cached_property
-    def _stereo_cis_trans_terminals(self) -> Dict[int, Tuple[int, int]]:
+    def _stereo_cis_trans_terminals(self) -> dict[int, tuple[int, int]]:
         """
         Cis-Trans terminal and central atoms to terminal pair mapping.
         """
@@ -663,7 +663,7 @@ class MoleculeStereo:
         return terminals
 
     @cached_property
-    def _stereo_cis_trans_counterpart(self) -> Dict[int, int]:
+    def _stereo_cis_trans_counterpart(self) -> dict[int, int]:
         """
         Cis-Trans terminal atoms counterparts
         """
@@ -677,7 +677,7 @@ class MoleculeStereo:
         return counterpart
 
     @cached_property
-    def _stereo_allenes_centers(self) -> Dict[int, int]:
+    def _stereo_allenes_centers(self) -> dict[int, int]:
         """
         Allene terminal atom to center mapping
         """
@@ -687,7 +687,7 @@ class MoleculeStereo:
         return terminals
 
     @cached_property
-    def _stereo_allenes_terminals(self) -> Dict[int, Tuple[int, int]]:
+    def _stereo_allenes_terminals(self) -> dict[int, tuple[int, int]]:
         """
         Allene center atom to terminals mapping
         """
@@ -962,7 +962,7 @@ class MoleculeStereo:
                 return n, order[0], -v
 
     @cached_property
-    def _chiral_morgan(self: Union['MoleculeContainer', 'MoleculeStereo']) -> Dict[int, int]:
+    def _chiral_morgan(self: Union['MoleculeContainer', 'MoleculeStereo']) -> dict[int, int]:
         stereo_atoms = {n for n, a in self.atoms() if a.stereo is not None}
         stereo_bonds = {n for n, mb in self._bonds.items() if any(b.stereo is not None for m, b in mb.items())}
         if not stereo_atoms and not stereo_bonds:

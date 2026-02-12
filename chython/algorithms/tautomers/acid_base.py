@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from itertools import combinations, product
-from typing import TYPE_CHECKING, Union, List
+from typing import TYPE_CHECKING, Union
 from ._acid import rules as acid_rules, stripped_rules as stripped_acid_rules
 from ._base import rules as base_rules, stripped_rules as stripped_base_rules
 
@@ -30,7 +30,7 @@ class AcidBase:
     __slots__ = ()
 
     def neutralize(self: 'MoleculeContainer', *, keep_charge=True, logging=False,
-                   _fix_stereo=True) -> Union[bool, List[int]]:
+                   _fix_stereo=True) -> Union[bool, list[int]]:
         """
         Convert organic salts to neutral form if possible. Only one possible form used for charge unbalanced structures.
 

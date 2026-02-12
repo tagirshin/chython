@@ -25,7 +25,6 @@ Reactor-based rule application, substructure queries, and serialization.
 """
 
 import pickle
-from typing import Dict, List, Set, Tuple
 
 import pytest
 from chython import smiles, smarts, Reactor
@@ -35,7 +34,6 @@ from chython.containers import (
     ReactionContainer,
     QueryContainer,
     Bond,
-    DynamicBond,
     QueryBond,
 )
 from chython.periodictable import QueryElement
@@ -121,8 +119,8 @@ def validate_rule(rule: ReactionContainer, reaction: ReactionContainer) -> bool:
 
 
 def add_environment_atoms(
-    cgr: CGRContainer, center_atoms: Set[int], depth: int
-) -> Set[int]:
+    cgr: CGRContainer, center_atoms: set[int], depth: int
+) -> set[int]:
     """Expand center atoms with environment (SynPlanner pattern)."""
     if depth:
         env = cgr.augmented_substructure(center_atoms, deep=depth)
@@ -130,7 +128,7 @@ def add_environment_atoms(
     return center_atoms
 
 
-def add_ring_structures(cgr: CGRContainer, rule_atoms: Set[int]) -> Set[int]:
+def add_ring_structures(cgr: CGRContainer, rule_atoms: set[int]) -> set[int]:
     """Add ring atoms intersecting center (SynPlanner pattern)."""
     for ring in cgr.sssr:
         if set(ring) & rule_atoms:

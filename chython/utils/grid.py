@@ -18,12 +18,12 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from itertools import zip_longest
-from typing import List, Optional
+from typing import Optional
 from ..containers import MoleculeContainer
 from ..algorithms.depict import _render_config, _graph_svg
 
 
-def grid_depict(molecules: List[MoleculeContainer], labels: Optional[List[str]] = None, *, cols: int = 3,
+def grid_depict(molecules: list[MoleculeContainer], labels: Optional[list[str]] = None, *, cols: int = 3,
                 width=None, height=None, clean2d: bool = True):
     """
     Depict molecules grid.
@@ -113,7 +113,7 @@ class GridDepict:
     """
     Grid depict for Jupyter notebooks.
     """
-    def __init__(self, molecules: List[MoleculeContainer], labels: Optional[List[str]] = None, *, cols: int = 3):
+    def __init__(self, molecules: list[MoleculeContainer], labels: Optional[list[str]] = None, *, cols: int = 3):
         """
         :param molecules: list of molecules
         :param labels: optional list of text labels

@@ -17,12 +17,13 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from numpy import array
-from typing import Sequence, Tuple, Optional
+from typing import Optional
+from collections.abc import Sequence
 from ..containers import MoleculeContainer
 from ..periodictable import Element
 
 
-def xyz(matrix: Sequence[Tuple[str, float, float, float]], charge=0, radical=0, radius_multiplier=1.25,
+def xyz(matrix: Sequence[tuple[str, float, float, float]], charge=0, radical=0, radius_multiplier=1.25,
         atom_charge: Optional[Sequence[int]] = None, _cls=MoleculeContainer) -> MoleculeContainer:
     from ._xyz import possible_bonds  # windows?
 

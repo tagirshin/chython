@@ -21,7 +21,8 @@ from collections import Counter, defaultdict
 from functools import cached_property
 from lazy_object_proxy import Proxy
 from numpy import uint, zeros
-from typing import Dict, Iterable, List, Tuple, Union, Optional, Set
+from typing import Union, Optional
+from collections.abc import Iterable
 from zlib import compress, decompress
 from .bonds import Bond, DynamicBond
 from .cgr import CGRContainer
@@ -69,14 +70,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
 
     def __init__(self):
         super().__init__()
-        self._meta: Optional[Dict] = None
+        self._meta: Optional[dict] = None
         self._name: str = ''
-        self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
-        self._changed: Optional[Set[int]] = None
-        self._backup: Optional[Dict] = None
+        self._conformers: list[dict[int, tuple[float, float, float]]] = []
+        self._changed: Optional[set[int]] = None
+        self._backup: Optional[dict] = None
 
     @property
-    def meta(self) -> Dict:
+    def meta(self) -> dict:
         if self._meta is None:
             self._meta = {}  # lazy
         return self._meta
@@ -92,9 +93,9 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         self._name = name
 
     def environment(self, atom: int, include_bond: bool = True, include_atom: bool = True) -> \
-            Tuple[Union[Tuple[int, Bond, Element],
-                        Tuple[int, Element],
-                        Tuple[int, Bond],
+            tuple[Union[tuple[int, Bond, Element],
+                        tuple[int, Element],
+                        tuple[int, Bond],
                         int], ...]:
         """
         groups of (atom_number, bond, atom) connected to atom or
@@ -218,7 +219,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         return self.brutto.get('C', 0)
 
     @cached_property
-    def brutto(self) -> Dict[str, int]:
+    def brutto(self) -> dict[str, int]:
         """Counted atoms dict"""
         c = Counter()
         # make an order
@@ -240,7 +241,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         return ''.join(f'{a}<sub>{c}</sub>' if c > 1 else a for a, c in self.brutto.items())
 
     @cached_property
-    def aromatic_rings(self) -> Tuple[Tuple[int, ...], ...]:
+    def aromatic_rings(self) -> tuple[tuple[int, ...], ...]:
         """
         Aromatic rings atoms numbers
         """
@@ -403,7 +404,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         """
         return self.substructure(self._augmented_substructure(atoms, deep)[-1], **kwargs)
 
-    def augmented_substructures(self, atoms: Iterable[int], deep: int = 1, **kwargs) -> List['MoleculeContainer']:
+    def augmented_substructures(self, atoms: Iterable[int], deep: int = 1, **kwargs) -> list['MoleculeContainer']:
         """
         Create list of substructures containing atoms and their neighbors
 
@@ -414,7 +415,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         """
         return [self.substructure(a, **kwargs) for a in self._augmented_substructure(atoms, deep)]
 
-    def split(self) -> List['MoleculeContainer']:
+    def split(self) -> list['MoleculeContainer']:
         """
         Split disconnected structure to connected substructures
         """
@@ -517,7 +518,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             h.calc_labels()
         return h
 
-    def pack(self, *, compressed=True, check=True, version=2, order: List[int] = None) -> bytes:
+    def pack(self, *, compressed=True, check=True, version=2, order: list[int] = None) -> bytes:
         """
         Pack into compressed bytes.
 
@@ -579,7 +580,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             return compress(data, 9)
         return data
 
-    def pach(self, *, compressed=True, check=True, version=2, order: List[int] = None) -> bytes:
+    def pach(self, *, compressed=True, check=True, version=2, order: list[int] = None) -> bytes:
         return self.pack(compressed=compressed, check=check, version=version, order=order)
 
     @classmethod

@@ -19,7 +19,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from collections import defaultdict
-from typing import List, TYPE_CHECKING, Union, Tuple
+from typing import TYPE_CHECKING, Union
 from ._charged import fixed_rules, morgan_rules
 from ._groups import *
 from ._tautomers import rules as tautomers_rules
@@ -43,7 +43,7 @@ class Standardize:
 
     def canonicalize(self: 'MoleculeContainer', *, fix_tautomers=True, keep_kekule=False,
                      ignore_pyrrole_hydrogen=False, buffer_size=7,
-                     logging=False, ignore=True) -> Union[bool, List[Tuple[Tuple[int, ...], int, str]]]:
+                     logging=False, ignore=True) -> Union[bool, list[tuple[tuple[int, ...], int, str]]]:
         """
         Convert molecule to canonical forms of functional groups and aromatic rings without explicit hydrogens.
 
@@ -101,7 +101,7 @@ class Standardize:
         return bool(k or s or h or t or c or a)
 
     def standardize(self: Union['MoleculeContainer', 'Standardize'], *, logging=False, ignore=True, fix_tautomers=True,
-                    _fix_stereo=True) -> Union[bool, List[Tuple[Tuple[int, ...], int, str]]]:
+                    _fix_stereo=True) -> Union[bool, list[tuple[tuple[int, ...], int, str]]]:
         """
         Standardize functional groups. Return True if any non-canonical group found.
 
@@ -146,14 +146,14 @@ class Standardize:
         return bool(fixed)
 
     def standardize_charges(self: 'MoleculeContainer', *, logging=False, prepare_molecule=True,
-                            _fix_stereo=True) -> Union[bool, List[int]]:
+                            _fix_stereo=True) -> Union[bool, list[int]]:
         """
         Set canonical positions of charges in heterocycles and ferrocenes.
 
         :param logging: return list of changed atoms.
         :param prepare_molecule: do thiele procedure.
         """
-        changed: List[int] = []
+        changed: list[int] = []
         bonds = self._bonds
         nsc = self.not_special_connectivity
         atoms = self._atoms
@@ -271,14 +271,14 @@ class Standardize:
         return False
 
     def standardize_tautomers(self: 'MoleculeContainer', *, logging=False, prepare_molecule=True,
-                              _fix_stereo=True) -> Union[bool, List[int]]:
+                              _fix_stereo=True) -> Union[bool, list[int]]:
         """
         Set canonical positions of hydrogens in azoles, guanidines, etc.
 
         :param logging: return a list of changed atoms.
         :param prepare_molecule: apply thiele procedure.
         """
-        changed: List[int] = []
+        changed: list[int] = []
         atoms = self._atoms
         bonds = self._bonds
 
@@ -390,7 +390,7 @@ class Standardize:
         return len(ab)
 
     def implicify_hydrogens(self: 'MoleculeContainer', *, logging=False, _fix_stereo=True) -> \
-            Union[int, Tuple[int, List[int]]]:
+            Union[int, tuple[int, list[int]]]:
         """
         Remove explicit hydrogen if possible. Return number of removed hydrogens.
         Works only with Kekule forms of aromatic structures.
@@ -459,7 +459,7 @@ class Standardize:
         return len(to_remove)
 
     def explicify_hydrogens(self: 'MoleculeContainer', *, start_map=None, _return_map=False, _fix_stereo=True) -> \
-            Union[int, List[Tuple[int, int]]]:
+            Union[int, list[tuple[int, int]]]:
         """
         Add explicit hydrogens to atoms.
 
@@ -496,7 +496,7 @@ class Standardize:
             return []
         return 0
 
-    def check_valence(self: 'MoleculeContainer') -> List[int]:
+    def check_valence(self: 'MoleculeContainer') -> list[int]:
         """
         Check valences of all atoms.
 

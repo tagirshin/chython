@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Dict
+from typing import Optional
 from weakref import ref
 from ...exceptions import IsConnectedAtom, IsNotConnectedAtom
 
@@ -60,14 +60,14 @@ class Core(ABC):
 
     @property
     @abstractmethod
-    def isotopes_distribution(self) -> Dict[int, float]:
+    def isotopes_distribution(self) -> dict[int, float]:
         """
         Isotopes distribution in earth
         """
 
     @property
     @abstractmethod
-    def isotopes_masses(self) -> Dict[int, float]:
+    def isotopes_masses(self) -> dict[int, float]:
         """
         Isotopes masses
         """
@@ -138,7 +138,7 @@ class Core(ABC):
             raise IsNotConnectedAtom
 
     @property
-    def xy(self) -> Tuple[float, float]:
+    def xy(self) -> tuple[float, float]:
         """
         (X, Y) coordinates of atom on 2D plane
         """
@@ -148,7 +148,7 @@ class Core(ABC):
             raise IsNotConnectedAtom
 
     @xy.setter
-    def xy(self, value: Tuple[float, float]):
+    def xy(self, value: tuple[float, float]):
         try:
             self._graph()._plane[self._map] = tuple(value)
         except AttributeError:
@@ -184,7 +184,7 @@ class Core(ABC):
             raise IsNotConnectedAtom
 
     @property
-    def ring_sizes(self) -> Tuple[int, ...]:
+    def ring_sizes(self) -> tuple[int, ...]:
         """
         Atom rings sizes.
         """

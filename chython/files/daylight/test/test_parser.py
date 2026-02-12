@@ -18,10 +18,9 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 import pytest
-from chython.exceptions import IncorrectSmiles, IncorrectSmarts
+from chython.exceptions import IncorrectSmiles
 from chython.files.daylight.parser import parser
 from chython.files.daylight.tokenize import smiles_tokenize, smarts_tokenize
-from chython.files.daylight.smarts import smarts
 
 
 def test_parser_basic():

@@ -17,7 +17,6 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from lazy_object_proxy import Proxy
-from ...periodictable import ListElement
 
 
 def _rules_single():
@@ -25,7 +24,6 @@ def _rules_single():
     rules without overlapping. these rules can match once to same set of atoms.
     """
     from ... import smarts
-    from ...containers import QueryContainer
 
     rules = []
 

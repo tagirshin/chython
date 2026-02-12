@@ -21,7 +21,8 @@ from io import StringIO, BytesIO, TextIOWrapper, BufferedIOBase, BufferedReader
 from itertools import count, islice, chain
 from lxml.etree import iterparse, QName, tostring
 from pathlib import Path
-from typing import Union, List, Iterator, Dict, Optional
+from typing import Union, Optional
+from collections.abc import Iterator
 from ._convert import create_molecule, create_reaction
 from ._mapping import postprocess_parsed_molecule, postprocess_parsed_reaction
 from .mdl import postprocess_molecule
@@ -111,7 +112,7 @@ class MRVRead:
         self.__xml = iterparse(self.__file, tag='{*}MChemicalStruct')
         self.__buffer = None
 
-    def read(self, amount: Optional[int] = None) -> List[Union[ReactionContainer, MoleculeContainer]]:
+    def read(self, amount: Optional[int] = None) -> list[Union[ReactionContainer, MoleculeContainer]]:
         """
         Parse whole file
 
@@ -179,7 +180,7 @@ class MRVRead:
         else:
             raise ValueError('reaction or molecule expected')
 
-    def read_metadata(self, *, current: bool = True) -> Dict[str, str]:
+    def read_metadata(self, *, current: bool = True) -> dict[str, str]:
         """
         Read metadata block
         """

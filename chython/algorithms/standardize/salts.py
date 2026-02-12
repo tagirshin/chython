@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import TYPE_CHECKING, List, Tuple, Union
+from typing import TYPE_CHECKING, Union
 from ._salts import acids, rules
 from ...periodictable import GroupI, GroupII
 
@@ -33,7 +33,7 @@ N = 7
 class Salts:
     __slots__ = ()
 
-    def remove_metals(self: 'MoleculeContainer', *, logging=False) -> Union[bool, List]:
+    def remove_metals(self: 'MoleculeContainer', *, logging=False) -> Union[bool, list]:
         """
         Remove disconnected S-metals and ammonia.
 
@@ -60,7 +60,7 @@ class Salts:
             return []
         return False
 
-    def remove_acids(self: 'MoleculeContainer', *, logging=False) -> Union[bool, List[int]]:
+    def remove_acids(self: 'MoleculeContainer', *, logging=False) -> Union[bool, list[int]]:
         """
         Remove common acids from organic bases salts.
         Works only for neutral pairs like HA+B. Use `neutralize` before.
@@ -88,7 +88,7 @@ class Salts:
             return []
         return False
 
-    def split_metal_salts(self: 'MoleculeContainer', *, logging=False) -> Union[bool, List[Tuple[int, int]]]:
+    def split_metal_salts(self: 'MoleculeContainer', *, logging=False) -> Union[bool, list[tuple[int, int]]]:
         """
         Split connected S-metal salts to cation/anion pairs.
 

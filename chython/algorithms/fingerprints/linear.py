@@ -21,7 +21,7 @@
 from collections import defaultdict, deque
 from math import log2
 from numpy import uint8, zeros
-from typing import Deque, Dict, List, Set, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ class LinearFingerprint:
         return fingerprints
 
     def linear_bit_set(self, min_radius: int = 1, max_radius: int = 4, length: int = 1024, number_active_bits: int = 2,
-                       number_bit_pairs: int = 4) -> Set[int]:
+                       number_bit_pairs: int = 4) -> set[int]:
         """
         Transform structure into set of indexes of True-valued features.
 
@@ -92,7 +92,7 @@ class LinearFingerprint:
                     active_bits.add(tpl & mask)
         return active_bits
 
-    def linear_hash_set(self, min_radius: int = 1, max_radius: int = 4, number_bit_pairs: int = 4) -> Set[int]:
+    def linear_hash_set(self, min_radius: int = 1, max_radius: int = 4, number_bit_pairs: int = 4) -> set[int]:
         """
         Transform structure into set of integer hashes of fragments with count information.
 
@@ -110,7 +110,7 @@ class LinearFingerprint:
                 for cnt in range(min(len(count), number_bit_pairs))}
 
     def linear_hash_smiles(self: 'MoleculeContainer', min_radius: int = 1, max_radius: int = 4,
-                           number_bit_pairs: int = 4) -> Dict[int, List[str]]:
+                           number_bit_pairs: int = 4) -> dict[int, list[str]]:
         """
         Transform structure into dict of integer hashes of fragments with count information and
             corresponding fragment SMILES.
@@ -138,7 +138,7 @@ class LinearFingerprint:
         return {k: list(v) for k, v in out.items()}
 
     def linear_smiles_hash(self, min_radius: int = 1, max_radius: int = 4,
-                           number_bit_pairs: int = 4) -> Dict[str, List[int]]:
+                           number_bit_pairs: int = 4) -> dict[str, list[int]]:
         """
         Transform structure into dict of fragment SMILES and list of corresponding integer hashes of fragments.
 
@@ -154,8 +154,8 @@ class LinearFingerprint:
                 out[s].append(k)
         return dict(out)
 
-    def _chains(self: 'MoleculeContainer', min_radius: int = 1, max_radius: int = 4) -> Set[Tuple[int, ...]]:
-        queue: Deque[Tuple[int, ...]]  # typing
+    def _chains(self: 'MoleculeContainer', min_radius: int = 1, max_radius: int = 4) -> set[tuple[int, ...]]:
+        queue: deque[tuple[int, ...]]  # typing
         atoms = self._atoms
         bonds = self._bonds
 
@@ -182,7 +182,7 @@ class LinearFingerprint:
         return arr
 
     def _fragments(self: 'MoleculeContainer', min_radius: int = 1,
-                   max_radius: int = 4) -> Dict[Tuple[int, ...], List[Tuple[int, ...]]]:
+                   max_radius: int = 4) -> dict[tuple[int, ...], list[tuple[int, ...]]]:
         atoms = self._atom_identifiers
         bonds = self._bonds
         out = defaultdict(list)
@@ -201,7 +201,7 @@ class LinearFingerprint:
         return dict(out)
 
     @property
-    def _atom_identifiers(self) -> Dict[int, int]:
+    def _atom_identifiers(self) -> dict[int, int]:
         raise NotImplementedError
 
 

@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import Optional, Tuple, Union, List, Set
+from typing import Optional, Union
 
 
 class Bond:
@@ -155,7 +155,7 @@ class DynamicBond:
 class QueryBond:
     __slots__ = ('_order', '_in_ring', '_stereo')
 
-    def __init__(self, order: Union[int, List[int], Set[int], Tuple[int, ...]],
+    def __init__(self, order: Union[int, list[int], set[int], tuple[int, ...]],
                  in_ring: Optional[bool] = None, stereo: Optional[bool] = None):
         if isinstance(order, (list, tuple, set)):
             if not all(isinstance(x, int) for x in order):
@@ -205,7 +205,7 @@ class QueryBond:
         return hash((self.order, self.in_ring))
 
     @property
-    def order(self) -> Tuple[int, ...]:
+    def order(self) -> tuple[int, ...]:
         return self._order
 
     @property

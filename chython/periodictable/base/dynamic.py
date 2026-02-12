@@ -17,7 +17,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from abc import ABC, abstractmethod
-from typing import Tuple, Type, Optional
+from typing import Optional
 from .element import Element
 from .vector import Vector
 from .core import Core
@@ -112,7 +112,7 @@ class DynamicElement(ABC):
         """
 
     @classmethod
-    def from_symbol(cls, symbol: str, *, isotope: Optional[int] = None, **_) -> Type['DynamicElement']:
+    def from_symbol(cls, symbol: str, *, isotope: Optional[int] = None, **_) -> type['DynamicElement']:
         """
         get DynamicElement class by its symbol
         """
@@ -123,7 +123,7 @@ class DynamicElement(ABC):
         return element
 
     @classmethod
-    def from_atomic_number(cls, number: Optional[int] = None, *, atomic_number: Optional[int] = None, **_) -> Type['DynamicElement']:
+    def from_atomic_number(cls, number: Optional[int] = None, *, atomic_number: Optional[int] = None, **_) -> type['DynamicElement']:
         """
         get DynamicElement class by its number
         """
@@ -198,7 +198,7 @@ class DynamicElement(ABC):
         return self._xy
 
     @xy.setter
-    def xy(self, value: Tuple[float, float]):
+    def xy(self, value: tuple[float, float]):
         self._xy = Vector(*value)
 
     @property

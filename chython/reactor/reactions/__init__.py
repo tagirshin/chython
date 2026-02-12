@@ -19,7 +19,8 @@
 #
 from collections import deque
 from itertools import product
-from typing import Iterator, Optional, List
+from typing import Optional
+from collections.abc import Iterator
 from ._amidation import template as amidation_template
 from ._amine_isocyanate import template as amine_isocyanate_template
 from ._buchwald_hartwig import template as buchwald_hartwig_template
@@ -75,7 +76,7 @@ class PreparedReactor:
         return f'Reactor<{self.rules["name"]}>'
 
     def __call__(self, *molecules: MoleculeContainer, one_shot=True, check_alerts: bool = True,
-          excess: Optional[List[int]] = None) -> Iterator[ReactionContainer]:
+          excess: Optional[list[int]] = None) -> Iterator[ReactionContainer]:
         """
         :param molecules: Reactants molecules.
         :param one_shot: Generate only single stage products. Otherwise, all possible combinations, including products.

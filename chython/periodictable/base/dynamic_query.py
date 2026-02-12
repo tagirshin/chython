@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import Tuple, Dict, Type, Union, Optional
+from typing import Union, Optional
 from .dynamic import Dynamic, DynamicElement
 from .element import Element
 from .query import QueryElement, AnyElement
@@ -27,7 +27,7 @@ class DynamicQuery(Dynamic):
     __slots__ = ()
 
     @property
-    def neighbors(self) -> Tuple[int, ...]:
+    def neighbors(self) -> tuple[int, ...]:
         """
         Number of neighbors of atom in reactant state.
         """
@@ -37,7 +37,7 @@ class DynamicQuery(Dynamic):
             raise IsNotConnectedAtom
 
     @property
-    def p_neighbors(self) -> Tuple[int, ...]:
+    def p_neighbors(self) -> tuple[int, ...]:
         """
         Number of neighbors of atom in product state.
         """
@@ -125,13 +125,13 @@ class DynamicQueryElement(DynamicQuery):
         return self._base_element_instance.atomic_radius
 
     @property
-    def isotopes_distribution(self) -> Dict[int, float]:
+    def isotopes_distribution(self) -> dict[int, float]:
         if self._atomic_number == 0:
             return {}
         return self._base_element_instance.isotopes_distribution
 
     @property
-    def isotopes_masses(self) -> Dict[int, float]:
+    def isotopes_masses(self) -> dict[int, float]:
         if self._atomic_number == 0:
             return {}
         return self._base_element_instance.isotopes_masses
@@ -229,11 +229,11 @@ class DynamicAnyElement(DynamicQuery):
         return 0
 
     @property
-    def isotopes_distribution(self) -> Dict[int, float]:
+    def isotopes_distribution(self) -> dict[int, float]:
         return {}
 
     @property
-    def isotopes_masses(self) -> Dict[int, float]:
+    def isotopes_masses(self) -> dict[int, float]:
         return {}
 
     @property

@@ -22,7 +22,8 @@ from functools import cached_property, partial
 from io import BytesIO
 from itertools import permutations
 from struct import Struct
-from typing import Any, Collection, Dict, Iterator, Optional, TYPE_CHECKING, Union
+from typing import Any, Optional, TYPE_CHECKING, Union
+from collections.abc import Collection, Iterator
 from .._functions import lazy_product
 from ..periodictable import Element, Query, AnyElement, AnyMetal, ListElement, QueryElement, ExtendedQuery
 
@@ -80,7 +81,7 @@ class Isomorphism:
         return True
 
     def _get_mapping(self, other: 'MoleculeContainer', /, *, automorphism_filter=True, searching_scope=None,
-                     components=None, get_mapping=None) -> Iterator[Dict[int, int]]:
+                     components=None, get_mapping=None) -> Iterator[dict[int, int]]:
         if components is None:  # ad-hoc for QueryContainer
             components, closures = self._compiled_query
             recursive_scope = self._precompute_recursive(other) if hasattr(self, '_precompute_recursive') else None
@@ -151,7 +152,7 @@ class MoleculeIsomorphism(Isomorphism):
             return False
         return True
 
-    def get_automorphism_mapping(self: 'MoleculeContainer') -> Iterator[Dict[int, int]]:
+    def get_automorphism_mapping(self: 'MoleculeContainer') -> Iterator[dict[int, int]]:
         """
         Iterator of all possible automorphism mappings.
         """
@@ -184,7 +185,7 @@ class MoleculeIsomorphism(Isomorphism):
             else:
                 yield mapping
 
-    def get_fast_mapping(self, other: 'MoleculeContainer') -> Optional[Dict[int, int]]:
+    def get_fast_mapping(self, other: 'MoleculeContainer') -> Optional[dict[int, int]]:
         """
         Get self to other fast (suboptimal) structure mapping.
         Only one possible atoms mapping returned.
@@ -620,7 +621,7 @@ class QueryIsomorphism(Isomorphism):
         return components
 
 
-def _get_automorphism_mapping(atoms: Dict[int, int], bonds: Dict[int, Dict[int, Any]]) -> Iterator[Dict[int, int]]:
+def _get_automorphism_mapping(atoms: dict[int, int], bonds: dict[int, dict[int, Any]]) -> Iterator[dict[int, int]]:
     if len(atoms) == len(set(atoms.values())):
         return  # all atoms unique
 

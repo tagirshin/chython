@@ -18,7 +18,8 @@
 #
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Dict, Generic, Iterator, Optional, Tuple, TypeVar
+from typing import Generic, Optional, TypeVar
+from collections.abc import Iterator
 from ..exceptions import AtomNotFound, MappingError, BondNotFound
 
 
@@ -30,8 +31,8 @@ class Graph(Generic[Atom, Bond], ABC):
     __slots__ = ('_atoms', '_bonds', '__dict__', '__weakref__')
     __class_cache__ = {}
 
-    _atoms: Dict[int, Atom]
-    _bonds: Dict[int, Dict[int, Bond]]
+    _atoms: dict[int, Atom]
+    _bonds: dict[int, dict[int, Bond]]
 
     def __init__(self):
         self._atoms = {}
@@ -43,7 +44,7 @@ class Graph(Generic[Atom, Bond], ABC):
     def has_atom(self, n: int) -> bool:
         return n in self._atoms
 
-    def atoms(self) -> Iterator[Tuple[int, Atom]]:
+    def atoms(self) -> Iterator[tuple[int, Atom]]:
         """
         iterate over all atoms
         """
@@ -69,7 +70,7 @@ class Graph(Generic[Atom, Bond], ABC):
         except KeyError:
             raise AtomNotFound
 
-    def bonds(self) -> Iterator[Tuple[int, int, Bond]]:
+    def bonds(self) -> Iterator[tuple[int, int, Bond]]:
         """
         iterate other all bonds
         """
@@ -166,7 +167,7 @@ class Graph(Generic[Atom, Bond], ABC):
                     cbn[m] = bond.copy(full=True)
         return copy
 
-    def remap(self, mapping: Dict[int, int]):
+    def remap(self, mapping: dict[int, int]):
         """
         Change atom numbers
 

@@ -26,7 +26,8 @@ from pathlib import Path
 from pickle import load, UnpicklingError
 from sys import platform
 from tempfile import gettempdir
-from typing import Union, Iterator, List, Dict, Optional
+from typing import Union, Optional
+from collections.abc import Iterator
 from ...containers import ReactionContainer, MoleculeContainer
 
 
@@ -67,7 +68,7 @@ class MDLRead(metaclass=MDLReadMeta):
         if indexable:
             self._load_cache()
 
-    def read(self, amount: Optional[int] = None) -> List[Union[ReactionContainer, MoleculeContainer]]:
+    def read(self, amount: Optional[int] = None) -> list[Union[ReactionContainer, MoleculeContainer]]:
         """
         Parse whole file
 
@@ -86,7 +87,7 @@ class MDLRead(metaclass=MDLReadMeta):
         """
 
     @abstractmethod
-    def read_metadata(self, *, current: bool = True) -> Dict[str, str]:
+    def read_metadata(self, *, current: bool = True) -> dict[str, str]:
         """
         Read metadata block
         """
@@ -134,7 +135,7 @@ class MDLRead(metaclass=MDLReadMeta):
         return ''.join(self._read_block(current=current))
 
     @abstractmethod
-    def _read_block(self, *, current: bool = True) -> List[str]:
+    def _read_block(self, *, current: bool = True) -> list[str]:
         """
         Read full record block with metadata
         """
@@ -178,7 +179,7 @@ class MDLRead(metaclass=MDLReadMeta):
         return next(iter(self))
 
     def __getitem__(self, item) -> Union[ReactionContainer, MoleculeContainer,
-                                         List[Union[ReactionContainer, MoleculeContainer]]]:
+                                         list[Union[ReactionContainer, MoleculeContainer]]]:
         """
         Getting the item by index from the original file,
         For slices records with errors skipped.

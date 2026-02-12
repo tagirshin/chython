@@ -21,14 +21,14 @@ from abc import ABC, abstractmethod
 from CachedMethods import cached_method
 from collections import defaultdict
 from functools import cached_property
-from heapq import heappop, heappush
 from itertools import product, count
 from random import random
-from typing import Callable, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Optional, TYPE_CHECKING, Union
+from collections.abc import Callable
 
 
 if TYPE_CHECKING:
-    from chython import MoleculeContainer, CGRContainer
+    from chython import MoleculeContainer
     from chython.containers.graph import Graph
 
 charge_str = {-4: '-4', -3: '-3', -2: '-2', -1: '-', 0: '0', 1: '+', 2: '+2', 3: '+3', 4: '+4'}
@@ -147,7 +147,7 @@ class Smiles(ABC):
         return hash(str(self))
 
     @cached_property
-    def smiles_atoms_order(self) -> Tuple[int, ...]:
+    def smiles_atoms_order(self) -> tuple[int, ...]:
         """
         Atoms order in canonic SMILES.
         """

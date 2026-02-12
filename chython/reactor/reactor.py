@@ -22,7 +22,8 @@ from functools import reduce
 from itertools import count, permutations, combinations
 from logging import getLogger, INFO
 from operator import or_
-from typing import List, Iterator, Tuple, Union
+from typing import Union
+from collections.abc import Iterator
 from .base import BaseReactor
 from .._functions import lazy_product
 from ..containers import QueryContainer, MoleculeContainer, ReactionContainer
@@ -42,8 +43,8 @@ class Reactor(BaseReactor):
     returns generator of reaction transformations with all
     possible reactions.
     """
-    def __init__(self, patterns: Tuple[QueryContainer, ...],
-                 products: Tuple[Union[MoleculeContainer, QueryContainer], ...], *,
+    def __init__(self, patterns: tuple[QueryContainer, ...],
+                 products: tuple[Union[MoleculeContainer, QueryContainer], ...], *,
                  delete_atoms: bool = True, one_shot: bool = True, polymerise_limit: int = 10,
                  automorphism_filter: bool = True, fix_aromatic_rings: bool = True,
                  fix_broken_pyrroles: bool = False, fix_tautomers: bool = True):
@@ -180,7 +181,7 @@ class Reactor(BaseReactor):
                                         queue.append((ch, [*prod[:i], *prod[i + 1:]], depth))
                     yield r
 
-    def _single_stage(self, chosen, ignored) -> Iterator[List[MoleculeContainer]]:
+    def _single_stage(self, chosen, ignored) -> Iterator[list[MoleculeContainer]]:
         max_ignored_number = united_chosen = None
         split = len(self._products_atoms) > 1
         for match in lazy_product(*(x.get_mapping(y, automorphism_filter=self._automorphism_filter) for x, y in
@@ -205,7 +206,7 @@ class Reactor(BaseReactor):
                 yield [new]
 
 
-def fix_mapping_overlap(structures) -> List[MoleculeContainer]:
+def fix_mapping_overlap(structures) -> list[MoleculeContainer]:
     if len(structures) == 1:
         return list(structures)
     checked = []

@@ -17,14 +17,14 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from itertools import product
-from typing import Union, List
+from typing import Union
 from .retro import Tree
 from ..containers import MoleculeContainer, QueryContainer
 from ..periodictable import H
 
 
 def fw_prepare_groups(core: Union[MoleculeContainer, QueryContainer], molecule: MoleculeContainer) -> \
-       List[MoleculeContainer]:
+       list[MoleculeContainer]:
     """
     Prepare list of core with connected groups. Hydrogens added to groups for marking connection point.
     Hydrogens have isotope marks equal to mapping of core atoms.
@@ -72,7 +72,7 @@ def fw_prepare_groups(core: Union[MoleculeContainer, QueryContainer], molecule: 
     return groups
 
 
-def fw_decomposition_tree(groups: List[MoleculeContainer]) -> Tree:
+def fw_decomposition_tree(groups: list[MoleculeContainer]) -> Tree:
     assert len(groups) == len(set(groups))
 
     pred = {}  # directed graph from substructures to superstructures

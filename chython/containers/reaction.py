@@ -21,7 +21,8 @@ from functools import reduce
 from itertools import chain
 from math import ceil
 from operator import itemgetter, or_
-from typing import Dict, Iterator, Optional, Tuple, List, Sequence, Union
+from typing import Optional, Union
+from collections.abc import Iterator, Sequence
 from zlib import compress, decompress
 from .cgr import CGRContainer
 from .cgr_query import QueryCGRContainer
@@ -45,7 +46,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
     __slots__ = ('_reactants', '_products', '_reagents', '_meta', '_name', '_arrow', '_signs', '_graph_cls', '__dict__')
 
     def __init__(self, reactants: Sequence[GraphContainer] = (), products: Sequence[GraphContainer] = (),
-                 reagents: Sequence[GraphContainer] = (), meta: Optional[Dict] = None, name: Optional[str] = None):
+                 reagents: Sequence[GraphContainer] = (), meta: Optional[dict] = None, name: Optional[str] = None):
         """
         New reaction object creation
 
@@ -84,7 +85,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         self._signs = None
 
     @property
-    def reactants(self) -> Tuple[GraphContainer, ...]:
+    def reactants(self) -> tuple[GraphContainer, ...]:
         return self._reactants
 
     def _get_graph_cls(self):
@@ -101,11 +102,11 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         return graph_cls
 
     @property
-    def reagents(self) -> Tuple[GraphContainer, ...]:
+    def reagents(self) -> tuple[GraphContainer, ...]:
         return self._reagents
 
     @property
-    def products(self) -> Tuple[GraphContainer, ...]:
+    def products(self) -> tuple[GraphContainer, ...]:
         return self._products
 
     def molecules(self) -> Iterator[GraphContainer]:
@@ -115,7 +116,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         return chain(self.reactants, self.reagents, self.products)
 
     @property
-    def meta(self) -> Dict:
+    def meta(self) -> dict:
         """
         Dictionary of metadata.
         Like DTYPE-DATUM in RDF
@@ -237,7 +238,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         return self.pack(compressed=compressed, check=check)
 
     @classmethod
-    def pack_len(cls, data: bytes, /, *, compressed=True) -> Tuple[List[int], List[int], List[int]]:
+    def pack_len(cls, data: bytes, /, *, compressed=True) -> tuple[list[int], list[int], list[int]]:
         """
         Returns reactants, reagents, products molecules atoms count in reaction pack.
         """
@@ -283,7 +284,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
             raise ValueError('invalid pack header')
 
         reactants, reagents, products = data[1], data[2], data[3]
-        molecules: List[MoleculeContainer] = []
+        molecules: list[MoleculeContainer] = []
         shift = 4
         for _ in range(reactants + reagents + products):
             m, pl = MoleculeContainer.unpack(data[shift:], compressed=False, _return_pack_length=True)

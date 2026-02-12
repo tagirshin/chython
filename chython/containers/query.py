@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from typing import Dict, Tuple, Union
+from typing import Union
 from .bonds import Bond, QueryBond
 from .graph import Graph
 from ..algorithms.calculate2d import Calculate2DQuery
@@ -31,7 +31,7 @@ class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQu
     __slots__ = ('_smarts', '_plane')
 
     def __init__(self, smarts: str):
-        self._plane: Dict[int, Tuple[float, float]] = {}
+        self._plane: dict[int, tuple[float, float]] = {}
         super().__init__()
         self._smarts = smarts
 
@@ -52,7 +52,7 @@ class QueryContainer(Graph[Query, QueryBond], QueryIsomorphism, Smarts, DepictQu
             atom.xy = xy
         return n
 
-    def add_bond(self, n, m, bond: Union[QueryBond, Bond, int, Tuple[int, ...]]):
+    def add_bond(self, n, m, bond: Union[QueryBond, Bond, int, tuple[int, ...]]):
         if isinstance(bond, Bond):
             bond = QueryBond.from_bond(bond)
         elif not isinstance(bond, QueryBond):

@@ -24,7 +24,7 @@ from pickle import dump
 from subprocess import check_output
 from sys import platform
 from time import strftime
-from typing import Union, Dict, List
+from typing import Union
 from .mdl import (MDLRead, MOLWrite, EMOLWrite, parse_mol_v2000, parse_mol_v3000, parse_rxn_v2000, parse_rxn_v3000,
                   postprocess_molecule)
 from ._convert import create_molecule, create_reaction
@@ -93,7 +93,7 @@ class RDFRead(MDLRead):
             mol.meta.update(meta)
         return mol
 
-    def read_metadata(self, *, current=True) -> Dict[str, str]:
+    def read_metadata(self, *, current=True) -> dict[str, str]:
         mkey = None
         meta = defaultdict(list)
         for line in self._read_metadata(current=current):
@@ -157,7 +157,7 @@ class RDFRead(MDLRead):
         else:
             raise NotImplementedError('Indexable supported in unix-like o.s. and for files stored on disk')
 
-    def _read_block(self, *, current=True) -> List[str]:
+    def _read_block(self, *, current=True) -> list[str]:
         """
         Read RXN or MOL block with metadata
         """

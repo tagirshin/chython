@@ -18,7 +18,7 @@
 #
 from itertools import chain
 from re import compile
-from typing import List, Union, Optional
+from typing import Union, Optional
 from .parser import parser
 from .tokenize import smiles_tokenize
 from .._convert import create_molecule, create_reaction
@@ -53,7 +53,7 @@ def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: 
     elif not data:
         raise ValueError('Empty string')
 
-    contract: Optional[List[List[int]]] = None
+    contract: Optional[list[list[int]]] = None
     radicals = []
     extended_stereo = {}
     log = []
@@ -117,7 +117,7 @@ def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: 
             reactants = set(range(lr))
             reagents = set(range(lr, mol_count - lp))
             products = set(range(mol_count - lp, mol_count))
-            new_molecules: List[Optional[str]] = [None] * mol_count
+            new_molecules: list[Optional[str]] = [None] * mol_count
             for c in contract:
                 if reactants.issuperset(c):
                     new_molecules[c[0]] = '.'.join(record['reactants'][x] for x in c)

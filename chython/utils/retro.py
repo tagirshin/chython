@@ -18,11 +18,10 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from chython import MoleculeContainer
-from typing import Tuple, List
 from ..algorithms.depict import _render_config, _graph_svg
 
 
-Tree = Tuple[MoleculeContainer, List['Tree']]
+Tree = tuple[MoleculeContainer, list['Tree']]
 
 
 def retro_depict(tree: Tree, *, y_gap=3., x_gap=5., width=None, height=None, clean2d: bool = True) -> str:

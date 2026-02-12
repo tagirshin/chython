@@ -19,7 +19,7 @@
 #
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Tuple, Type, List, Union, Optional
+from typing import Union, Optional
 from .element import Element
 from .vector import Vector
 from .groups import GroupXVIII
@@ -47,8 +47,8 @@ def _validate(value, prop):
 class Query(ABC):
     __slots__ = ('_neighbors', '_hybridization', '_masked', '_xy')
 
-    def __init__(self, neighbors: Union[int, Tuple[int, ...], None] = None,
-                 hybridization: Union[int, Tuple[int, ...], None] = None, masked: bool = False):
+    def __init__(self, neighbors: Union[int, tuple[int, ...], None] = None,
+                 hybridization: Union[int, tuple[int, ...], None] = None, masked: bool = False):
         self.neighbors = neighbors
         self.hybridization = hybridization
         self.masked = masked
@@ -60,7 +60,7 @@ class Query(ABC):
         ...
 
     @property
-    def neighbors(self) -> Tuple[int, ...]:
+    def neighbors(self) -> tuple[int, ...]:
         return self._neighbors
 
     @neighbors.setter
@@ -68,7 +68,7 @@ class Query(ABC):
         self._neighbors = _validate(value, 'neighbors')
 
     @property
-    def hybridization(self) -> Tuple[int, ...]:
+    def hybridization(self) -> tuple[int, ...]:
         return self._hybridization
 
     @hybridization.setter
@@ -111,7 +111,7 @@ class Query(ABC):
         return self._xy
 
     @xy.setter
-    def xy(self, value: Tuple[float, float]):
+    def xy(self, value: tuple[float, float]):
         self._xy = Vector(*value)
 
     @property
@@ -144,11 +144,11 @@ class ExtendedQuery(Query, ABC):
     __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
                  '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements')
 
-    def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, Tuple[int, ...], None] = None,
-                 ring_sizes: Union[int, Tuple[int, ...], None] = None,
-                 implicit_hydrogens: Union[int, Tuple[int, ...], None] = None, stereo: Optional[bool] = None,
-                 total_connectivity: Union[int, Tuple[int, ...], None] = None,
-                 rings_count: Union[int, Tuple[int, ...], None] = None,
+    def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, tuple[int, ...], None] = None,
+                 ring_sizes: Union[int, tuple[int, ...], None] = None,
+                 implicit_hydrogens: Union[int, tuple[int, ...], None] = None, stereo: Optional[bool] = None,
+                 total_connectivity: Union[int, tuple[int, ...], None] = None,
+                 rings_count: Union[int, tuple[int, ...], None] = None,
                  charge_not: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.charge = charge
@@ -192,7 +192,7 @@ class ExtendedQuery(Query, ABC):
         self._is_radical = value
 
     @property
-    def heteroatoms(self) -> Tuple[int, ...]:
+    def heteroatoms(self) -> tuple[int, ...]:
         return self._heteroatoms
 
     @heteroatoms.setter
@@ -200,7 +200,7 @@ class ExtendedQuery(Query, ABC):
         self._heteroatoms = _validate(value, 'heteroatoms')
 
     @property
-    def implicit_hydrogens(self) -> Tuple[int, ...]:
+    def implicit_hydrogens(self) -> tuple[int, ...]:
         return self._implicit_hydrogens
 
     @implicit_hydrogens.setter
@@ -208,7 +208,7 @@ class ExtendedQuery(Query, ABC):
         self._implicit_hydrogens = _validate(value, 'implicit hydrogens')
 
     @property
-    def ring_sizes(self) -> Tuple[int, ...]:
+    def ring_sizes(self) -> tuple[int, ...]:
         """
         Atom rings sizes.
         """
@@ -244,7 +244,7 @@ class ExtendedQuery(Query, ABC):
         self._stereo = value
 
     @property
-    def total_connectivity(self) -> Tuple[int, ...]:
+    def total_connectivity(self) -> tuple[int, ...]:
         return self._total_connectivity
 
     @total_connectivity.setter
@@ -252,7 +252,7 @@ class ExtendedQuery(Query, ABC):
         self._total_connectivity = _validate(value, 'total_connectivity')
 
     @property
-    def rings_count(self) -> Tuple[int, ...]:
+    def rings_count(self) -> tuple[int, ...]:
         return self._rings_count
 
     @rings_count.setter
@@ -375,7 +375,7 @@ class AnyElement(ExtendedQuery):
 class ListElement(ExtendedQuery):
     __slots__ = ('_elements', '__dict__')
 
-    def __init__(self, elements: List[str], **kwargs):
+    def __init__(self, elements: list[str], **kwargs):
         """
         Elements list
         """
@@ -486,7 +486,7 @@ class QueryElement(ExtendedQuery, ABC):
         ...
 
     @classmethod
-    def from_symbol(cls, symbol: str) -> Type[Union['QueryElement', 'AnyElement', 'AnyMetal']]:
+    def from_symbol(cls, symbol: str) -> type[Union['QueryElement', 'AnyElement', 'AnyMetal']]:
         """
         get Element class by its symbol
         """
@@ -501,7 +501,7 @@ class QueryElement(ExtendedQuery, ABC):
         return element
 
     @classmethod
-    def from_atomic_number(cls, number: int) -> Type['QueryElement']:
+    def from_atomic_number(cls, number: int) -> type['QueryElement']:
         """
         get Element class by its number
         """
