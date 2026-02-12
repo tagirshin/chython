@@ -21,7 +21,7 @@ from collections import Counter, defaultdict
 from functools import cached_property
 from lazy_object_proxy import Proxy
 from numpy import uint, zeros
-from typing import Dict, Iterable, List, Tuple, Union
+from typing import Dict, Iterable, List, Tuple, Union, Optional, Set
 from zlib import compress, decompress
 from .bonds import Bond, DynamicBond
 from .cgr import CGRContainer
@@ -40,7 +40,6 @@ from ..algorithms.smiles import MoleculeSmiles
 from ..algorithms.standardize import StandardizeMolecule
 from ..algorithms.stereo import MoleculeStereo
 from ..algorithms.tautomers import Tautomers
-from ..algorithms.x3dom import X3domMolecule
 from ..exceptions import ValenceError
 from ..periodictable import DynamicElement, Element, H as _H
 
@@ -65,15 +64,16 @@ S = 16
 
 class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, MoleculeIsomorphism,
                         Aromatize, StandardizeMolecule, MoleculeSmiles, DepictMolecule, Calculate2DMolecule,
-                        Conformers, Fingerprints, Tautomers, RDkit, MCS, X3domMolecule):
+                        Conformers, Fingerprints, Tautomers, RDkit, MCS):
     __slots__ = ('_meta', '_name', '_conformers', '_changed', '_backup')
 
     def __init__(self):
         super().__init__()
-        self._meta = None
-        self._name = None
-        self._changed = None
-        self._backup = None
+        self._meta: Optional[Dict] = None
+        self._name: str = ''
+        self._conformers: List[Dict[int, Tuple[float, float, float]]] = []
+        self._changed: Optional[Set[int]] = None
+        self._backup: Optional[Dict] = None
 
     @property
     def meta(self) -> Dict:
@@ -259,6 +259,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
                 atom = Element.from_atomic_number(atom)()
             else:
                 raise TypeError('Element object expected')
+        
+        charge = kwargs.pop('charge', 0)
+        is_radical = kwargs.pop('is_radical', False)
+        xy = kwargs.pop('xy', (0.0, 0.0))
+
+        atom.charge = charge
+        atom.is_radical = is_radical
+        atom.xy = xy
 
         n = super().add_atom(atom, *args, **kwargs)
         if self._changed is None:
@@ -445,6 +453,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in self._atoms.keys() - common:  # cleavage atoms
             ha[n] = from_atom(self._atoms[n])
             hb[n] = {}
+            if dynamic:
+                h._plane[n] = tuple(self._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
             for m, bond in self._bonds[n].items():
                 if m not in ha:
                     if m in common:  # bond to common atoms is broken bond
@@ -455,7 +471,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in other._atoms.keys() - common:  # coupling atoms
             ha[n] = from_atom(other._atoms[n])
             hb[n] = {}
-
+            if dynamic:
+                h._plane[n] = tuple(other._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
             for m, bond in other._bonds[n].items():
                 if m not in ha:
                     if m in common:  # bond to common atoms is formed bond
@@ -474,6 +497,14 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         for n in common:
             ha[n] = from_atoms(self._atoms[n], other._atoms[n])
             hb[n] = {}
+            if dynamic:
+                h._plane[n] = tuple(self._atoms[n].xy)
+                h._charges[n] = ha[n].charge
+                h._radicals[n] = ha[n].is_radical
+                h._p_charges[n] = ha[n].p_charge
+                h._p_radicals[n] = ha[n].p_is_radical
+                h._hybridizations[n] = 1
+                h._p_hybridizations[n] = 1
 
             for m, (o1, o2) in adj[n].items():
                 if m not in ha:
@@ -664,6 +695,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
 
             atom._in_ring = n in atoms_rings_sizes
             atom._ring_sizes = atoms_rings_sizes.get(n) or set()
+            atom._rings_count = len(atoms_rings.get(n, set()))
 
     def calc_implicit(self, n: int):
         """

@@ -22,7 +22,7 @@ from CachedMethods import cached_method
 from collections import defaultdict
 from functools import cached_property
 from heapq import heappop, heappush
-from itertools import product
+from itertools import product, count
 from random import random
 from typing import Callable, Optional, Tuple, TYPE_CHECKING, Union
 
@@ -46,6 +46,7 @@ dyn_charge_str = {(i, j): f'{charge_str[i]}>{charge_str[j]}' if i != j else char
 dyn_charge_str[(0, 0)] = ''
 
 dyn_radical_str = {(True, True): '*', (True, False): '*>^', (False, True): '^>*'}
+hybridization_str = {1: '1', 2: '2', 3: '3', 4: '4'}
 
 # atomic number constants
 B = 5
@@ -160,11 +161,11 @@ class Smiles(ABC):
     def _smiles(self: Union['Graph', 'Smiles'], weights, *, asymmetric_closures=False,
                 open_parenthesis='(', close_parenthesis=')', delimiter='.', _return_order=False, **kwargs):
         if not self._atoms:
-            return []
+            return ([], []) if _return_order else []
         bonds = self._bonds
         atoms_set = set(self._atoms)
         seen = {}
-        cycle = 0
+        cycle_counter = count(1)
         casted_cycles = {}
         string = []
         order = []
@@ -221,7 +222,7 @@ class Smiles(ABC):
                     elif (child, parent) not in disconnected:
                         disconnected.add((parent, child))
                         disconnected.add((child, parent))
-                        cycle += 1
+                        cycle = next(cycle_counter)
                         tokens[parent].append((child, cycle))
                         tokens[child].append((parent, cycle))
 
@@ -263,15 +264,9 @@ class Smiles(ABC):
             # get order of each atom in ring closures
             rings_order = {token: n for n, token in enumerate(smiles) if token in tokens}
             for token in rings_order:  # prepare closure numbers
-                released = []
                 # order closure atoms as in smiles string
                 for _, c in sorted(tokens[token], key=lambda x: rings_order[x[0]]):
-                    if c in casted_cycles:  # release ring closure number
-                        released.append(casted_cycles[c])
-                    else:
-                        casted_cycles[c] = heappop(heap)
-                for c in released:  # delayed release to avoid duplicates. e.g. C1..C11..C1 instead of C1..C12..C2
-                    heappush(heap, c)
+                    casted_cycles.setdefault(c, len(casted_cycles) + 1)
 
             # prepare new neighbors order for stereo sign calculation
             for token in smiles:
@@ -574,29 +569,159 @@ class MoleculeSmiles(Smiles):
 class CGRSmiles(Smiles):
     __slots__ = ()
 
-    def _smiles_order(self: 'CGRContainer', stereo=True):
-        return self.atoms_order.__getitem__
+    def _smiles_order(self, stereo=True):
+        """Returns a callable that provides weights for atoms based on self.atoms_order."""
+        # self.atoms_order is expected to be a dictionary {atom_idx: order_value}
+        # from the Morgan mixin.
+        atom_orders = self.atoms_order
+        return lambda atom_idx: atom_orders[atom_idx]
 
-    def _format_atom(self: 'CGRContainer', n, adjacency, **kwargs):
+    def _format_atom(self, n, adjacency, **kwargs):
         atom = self._atoms[n]
+        charge = atom.charge
+        is_radical = atom.is_radical
+        p_charge = self._p_charges.get(n, 0)
+        p_is_radical = self._p_radicals.get(n, False)
         if atom.isotope:
-            smi = [str(atom.isotope), atom.atomic_symbol]
+            smi = [str(atom.isotope)]
         else:
-            smi = [atom.atomic_symbol]
+            smi = []
+        reactant_hybridization = self._hybridizations.get(n, 1)
+        product_hybridization = self._p_hybridizations.get(n, 1)
+        if kwargs.get('aromatic', True) and (reactant_hybridization == 4 or product_hybridization == 4):
+            smi.append(atom.atomic_symbol.lower())
+        else:
+            smi.append(atom.atomic_symbol)
 
-        if atom.charge or atom.p_charge:
-            smi.append(dyn_charge_str[(atom.charge, atom.p_charge)])
-        if atom.is_radical or atom.p_is_radical:
-            smi.append(dyn_radical_str[(atom.is_radical, atom.p_is_radical)])
+        if charge or p_charge:
+            smi.append(dyn_charge_str[(charge, p_charge)])
+        if is_radical or p_is_radical:
+            smi.append(dyn_radical_str[(is_radical, p_is_radical)])
 
         if len(smi) != 1 or atom.atomic_symbol not in organic_set:
             smi.insert(0, '[')
             smi.append(']')
         return ''.join(smi)
 
-    def _format_bond(self: 'CGRContainer', n, m, adjacency, **kwargs):
+    def _format_bond(self, n, m, adjacency, **kwargs):
+        bond = self._bonds[n][m]
+        order, p_order = bond.order, bond.p_order
+        if kwargs.get('aromatic', True):
+            if order == p_order == 4:
+                return ''
+        return dyn_order_str[(order, p_order)]
+
+
+class QuerySmiles(Smiles):
+    __slots__ = ()
+
+    @property
+    def _smiles_order(self):
+        return self.atoms_order.__getitem__
+
+    def _format_atom(self, n, **kwargs):
+        atom = self._atoms[n]
+        charge = self._charges[n]
+        hybridization = self._hybridizations[n]
+        neighbors = self._neighbors[n]
+        hydrogens = self._hydrogens[n]
+        rings = self._rings_sizes[n]
+        heteroatoms = self._heteroatoms[n]
+
+        if atom.isotope:
+            smi = ['[', str(atom.isotope), atom.atomic_symbol]
+        else:
+            smi = ['[', atom.atomic_symbol]
+
+        if kwargs.get('stereo', True) and n in self._atoms_stereo:  # carbon only
+            smi.append('@' if self._translate_tetrahedron_sign(n, kwargs['adjacency'][n]) else '@@')
+
+        if kwargs.get('neighbors', True) and neighbors:
+            smi.append(';D')
+            smi.append(''.join(str(x) for x in neighbors))
+
+        if kwargs.get('hydrogens', True) and hydrogens:
+            smi.append(';H')
+            smi.append(''.join(str(x) for x in hydrogens))
+
+        if kwargs.get('rings', True) and rings:
+            smi.append(';r')
+            smi.append(''.join(str(x) for x in rings))
+
+        if kwargs.get('hybridization', True) and hybridization:
+            smi.append(';Z')
+            smi.append(''.join(hybridization_str[x] for x in hybridization))
+
+        if kwargs.get('heteroatoms', True) and heteroatoms:
+            smi.append(';W')
+            smi.append(''.join(str(x) for x in heteroatoms))
+
+        if self._radicals[n]:
+            smi.append(';*')
+
+        if charge:
+            smi.append(charge_str[charge])
+
+        smi.append(']')
+        return ''.join(smi)
+
+    def _format_bond(self, n, m, **kwargs):
+        return ','.join(order_str[x] for x in self._bonds[n][m].order)
+
+
+class QueryCGRSmiles(Smiles):
+    __slots__ = ()
+
+    def _smiles_order(self, stereo=True):
+        """Returns a callable that provides weights for atoms based on self.atoms_order."""
+        # self.atoms_order is expected to be a dictionary {atom_idx: order_value}
+        atom_orders = self.atoms_order
+        return lambda atom_idx: atom_orders[atom_idx]
+
+    def _format_atom(self, n, adjacency, **kwargs):
+        atom = self._atoms[n]
+        charge = getattr(self, '_charges', {}).get(n, getattr(atom, 'charge', 0))
+        hybridization = self._hybridizations.get(n, ())
+        neighbors = self._neighbors.get(n, ())
+        is_radical = getattr(self, '_radicals', {}).get(n, getattr(atom, 'is_radical', False))
+        p_charge = self._p_charges.get(n, 0)
+        p_hybridization = self._p_hybridizations.get(n, ())
+        p_neighbors = self._p_neighbors.get(n, ())
+        p_is_radical = self._p_radicals.get(n, False)
+
+        if atom.isotope:
+            smi = ['[', str(atom.isotope), atom.atomic_symbol]
+        else:
+            smi = ['[', atom.atomic_symbol]
+
+        if kwargs.get('hybridization', True) and hybridization:
+            smi.append(';')
+            smi.append(''.join(hybridization_str[x] for x in hybridization))
+            smi.append('>')
+            smi.append(''.join(hybridization_str[x] for x in p_hybridization))
+            if kwargs.get('neighbors', True) and neighbors:
+                smi.append(''.join(str(x) for x in neighbors))
+                smi.append('>')
+                smi.append(''.join(str(x) for x in p_neighbors))
+            smi.append(';')
+        elif kwargs.get('neighbors', True) and neighbors:
+            smi.append(';')
+            smi.append(''.join(str(x) for x in neighbors))
+            smi.append('>')
+            smi.append(''.join(str(x) for x in p_neighbors))
+            smi.append(';')
+
+        if charge or p_charge:
+            smi.append(dyn_charge_str[(charge, p_charge)])
+        if is_radical or p_is_radical:
+            smi.append(dyn_radical_str[(is_radical, p_is_radical)])
+
+        smi.append(']')
+        return ''.join(smi)
+
+    def _format_bond(self, n, m, adjacency, **kwargs):
         bond = self._bonds[n][m]
         return dyn_order_str[(bond.order, bond.p_order)]
 
 
-__all__ = ['MoleculeSmiles', 'CGRSmiles']
+__all__ = ['MoleculeSmiles', 'CGRSmiles', 'QuerySmiles', 'QueryCGRSmiles']

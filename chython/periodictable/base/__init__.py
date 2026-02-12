@@ -16,10 +16,16 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from .dynamic import *
+from typing import Union
+from .core import *
 from .element import *
 from .query import *
+from .dynamic import DynamicElement
+from .dynamic_query import *
 
 
-__all__ = ['Element', 'DynamicElement', 'Query', 'ExtendedQuery',
-           'QueryElement', 'AnyElement', 'AnyMetal', 'ListElement']
+AnyAtom = Union[Element, DynamicElement, QueryElement, DynamicQueryElement, AnyElement, DynamicAnyElement, ListElement]
+
+
+__all__ = ['Core', 'Element', 'DynamicElement', 'Query', 'ExtendedQuery',
+           'QueryElement', 'AnyAtom', 'AnyElement', 'AnyMetal', 'ListElement', 'DynamicQueryElement', 'DynamicAnyElement']

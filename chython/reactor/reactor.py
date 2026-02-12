@@ -26,6 +26,7 @@ from typing import List, Iterator, Tuple, Union
 from .base import BaseReactor
 from .._functions import lazy_product
 from ..containers import QueryContainer, MoleculeContainer, ReactionContainer
+from ..exceptions import InvalidAromaticRing
 
 
 logger = getLogger('chython.reactor')
@@ -73,6 +74,55 @@ class Reactor(BaseReactor):
         self._automorphism_filter = automorphism_filter
         super().__init__(reduce(or_, patterns), reduce(or_, products), delete_atoms, fix_aromatic_rings,
                          fix_tautomers, fix_broken_pyrroles)
+
+    def _mapping_renumber(self):
+        """Build a mapping from internal atom numbers to sequential 1..N."""
+        all_atoms = set()
+        for qc in self._patterns:
+            all_atoms.update(qc._atoms)
+        for qc in self._products:
+            all_atoms.update(qc._atoms)
+        return {n: i for i, n in enumerate(sorted(all_atoms), 1)}
+
+    def __str__(self):
+        renumber = self._mapping_renumber()
+        lhs = '.'.join(p.to_smarts(mapping_renumber=renumber) for p in self._patterns)
+        rhs = '.'.join(p.to_smarts(mapping_renumber=renumber) for p in self._products)
+        return f'{lhs}>>{rhs}'
+
+    def __format__(self, format_spec):
+        renumber = self._mapping_renumber()
+        chython_specific = 'c' in format_spec if format_spec else False
+        lhs = '.'.join(p.to_smarts(chython_specific=chython_specific, mapping_renumber=renumber)
+                       for p in self._patterns)
+        rhs = '.'.join(p.to_smarts(chython_specific=chython_specific, mapping_renumber=renumber)
+                       for p in self._products)
+        return f'{lhs}>>{rhs}'
+
+    @classmethod
+    def from_smarts(cls, rxn_smarts: str, **kwargs) -> 'Reactor':
+        """Parse a reaction SMARTS string into a Reactor.
+
+        Format: ``pattern1.pattern2>>product1.product2``
+
+        Each piece may carry CXSMARTS extensions: ``[C:1] |^1:0|``
+
+        :param rxn_smarts: Reaction SMARTS string with ``>>`` separator.
+        :param kwargs: Extra keyword arguments passed to Reactor.__init__
+            (delete_atoms, one_shot, etc.).
+        """
+        from ..files.daylight.smarts import smarts
+
+        if '>>' not in rxn_smarts:
+            raise ValueError(f'no >> in reaction SMARTS: {rxn_smarts}')
+
+        lhs, rhs = rxn_smarts.split('>>', 1)
+        patterns = tuple(smarts(s.strip()) for s in lhs.split('.') if s.strip())
+        products = tuple(smarts(s.strip()) for s in rhs.split('.') if s.strip())
+
+        if not patterns or not products:
+            raise ValueError('empty patterns or products')
+        return cls(patterns=patterns, products=products, **kwargs)
 
     def __call__(self, *structures: MoleculeContainer):
         if any(not isinstance(structure, MoleculeContainer) for structure in structures):
@@ -141,7 +191,10 @@ class Reactor(BaseReactor):
             if united_chosen is None:
                 united_chosen = reduce(or_, chosen)
                 max_ignored_number = max(ignored, default=0)
-            new = self._patcher(united_chosen, mapping)
+            try:
+                new = self._patcher(united_chosen, mapping)
+            except InvalidAromaticRing:
+                continue
             collision = set(new).intersection(ignored)
             if collision:
                 new.remap(dict(zip(collision, count(max(max_ignored_number, max(new)) + 1))))

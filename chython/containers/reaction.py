@@ -21,30 +21,35 @@ from functools import reduce
 from itertools import chain
 from math import ceil
 from operator import itemgetter, or_
-from typing import Dict, Iterator, Optional, Tuple, List, Sequence
+from typing import Dict, Iterator, Optional, Tuple, List, Sequence, Union
 from zlib import compress, decompress
 from .cgr import CGRContainer
+from .cgr_query import QueryCGRContainer
 from .molecule import MoleculeContainer
+from .query import QueryContainer
 from ..algorithms.calculate2d import Calculate2DReaction
 from ..algorithms.depict import DepictReaction
 from ..algorithms.mapping import Mapping
 from ..algorithms.standardize import StandardizeReaction
 
 
+GraphContainer = Union[MoleculeContainer, QueryContainer, CGRContainer, QueryCGRContainer]
+
+
 class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, DepictReaction):
     """
     Reaction storage. Contains reactants, products and reagents lists.
 
-    Reaction storage hashable and comparable. based on reaction unique signature (SMILES).
+    Reaction storage hashable and comparable. based on reaction unique signature (SMILES/SMARTS).
     """
-    __slots__ = ('_reactants', '_products', '_reagents', '_meta', '_name', '_arrow', '_signs', '__dict__')
+    __slots__ = ('_reactants', '_products', '_reagents', '_meta', '_name', '_arrow', '_signs', '_graph_cls', '__dict__')
 
-    def __init__(self, reactants: Sequence[MoleculeContainer] = (), products: Sequence[MoleculeContainer] = (),
-                 reagents: Sequence[MoleculeContainer] = (), meta: Optional[Dict] = None, name: Optional[str] = None):
+    def __init__(self, reactants: Sequence[GraphContainer] = (), products: Sequence[GraphContainer] = (),
+                 reagents: Sequence[GraphContainer] = (), meta: Optional[Dict] = None, name: Optional[str] = None):
         """
         New reaction object creation
 
-        :param reactants: list of MoleculeContainers in left side of reaction
+        :param reactants: list of MoleculeContainers (or other supported graph containers) in left side of reaction
         :param products: right side of reaction. see reactants
         :param reagents: middle side of reaction: solvents, catalysts, etc. see reactants
         :param meta: dictionary of metadata. like DTYPE-DATUM in RDF
@@ -55,12 +60,18 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         reagents = tuple(reagents)
         if not reactants and not products and not reagents:
             raise ValueError('At least one graph object required')
-        elif not all(isinstance(x, MoleculeContainer) for x in chain(reactants, products, reagents)):
-            raise TypeError('MoleculeContainers expected')
+        graphs = reactants + reagents + products
+        graph_cls = type(graphs[0])
+        allowed = (MoleculeContainer, QueryContainer, CGRContainer, QueryCGRContainer)
+        if not issubclass(graph_cls, allowed):
+            raise TypeError('MoleculeContainer or QueryContainer or CGRContainer or QueryCGRContainer expected')
+        if not all(isinstance(x, graph_cls) for x in graphs):
+            raise TypeError(f'{graph_cls.__name__} expected')
 
         self._reactants = reactants
         self._products = products
         self._reagents = reagents
+        self._graph_cls = graph_cls
         if meta is None:
             self._meta = None
         else:
@@ -73,20 +84,33 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         self._signs = None
 
     @property
-    def reactants(self) -> Tuple[MoleculeContainer, ...]:
+    def reactants(self) -> Tuple[GraphContainer, ...]:
         return self._reactants
 
+    def _get_graph_cls(self):
+        graph_cls = getattr(self, '_graph_cls', None)
+        if graph_cls is None:
+            graphs = self._reactants + self._reagents + self._products
+            if not graphs:
+                raise ValueError('At least one graph object required')
+            graph_cls = type(graphs[0])
+            allowed = (MoleculeContainer, QueryContainer, CGRContainer, QueryCGRContainer)
+            if not issubclass(graph_cls, allowed):
+                raise TypeError('MoleculeContainer or QueryContainer or CGRContainer or QueryCGRContainer expected')
+            self._graph_cls = graph_cls
+        return graph_cls
+
     @property
-    def reagents(self) -> Tuple[MoleculeContainer, ...]:
+    def reagents(self) -> Tuple[GraphContainer, ...]:
         return self._reagents
 
     @property
-    def products(self) -> Tuple[MoleculeContainer, ...]:
+    def products(self) -> Tuple[GraphContainer, ...]:
         return self._products
 
-    def molecules(self) -> Iterator[MoleculeContainer]:
+    def molecules(self) -> Iterator[GraphContainer]:
         """
-        Iterator of all reaction molecules
+        Iterator of all reaction graphs
         """
         return chain(self.reactants, self.reagents, self.products)
 
@@ -119,6 +143,7 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         copy._products = tuple(x.copy() for x in self.products)
         copy._reagents = tuple(x.copy() for x in self.reagents)
         copy._name = self._name
+        copy._graph_cls = self._get_graph_cls()
         if self._meta is None:
             copy._meta = None
         else:
@@ -127,6 +152,28 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         copy._signs = self._signs
         return copy
 
+    @classmethod
+    def from_cgr(cls, cgr: 'CGRContainer') -> 'ReactionContainer':
+        """
+        Decompose CGR into reaction
+
+        :param cgr: CGRContainer to decompose
+        :return: ReactionContainer with separate reactant and product molecules
+        """
+        if not isinstance(cgr, CGRContainer):
+            raise TypeError('CGR expected')
+        r, p = cgr.decompose()
+        reaction = object.__new__(cls)
+        reaction._reactants = tuple(r.split())
+        reaction._products = tuple(p.split())
+        reaction._reagents = ()
+        reaction._graph_cls = MoleculeContainer
+        reaction._meta = None
+        reaction._name = None
+        reaction._arrow = None
+        reaction._signs = None
+        return reaction
+
     def compose(self, *, dynamic=True) -> CGRContainer:
         """
         Get CGR of reaction
@@ -134,6 +181,10 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         Reagents will be presented as unchanged molecules
         :return: CGRContainer
         """
+        graph_cls = self._get_graph_cls()
+        if not issubclass(graph_cls, MoleculeContainer):
+            raise TypeError('Only MoleculeContainer reactions are composable')
+
         rr = self.reagents + self.reactants
         if rr:
             r = reduce(or_, rr)
@@ -170,6 +221,9 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
         :param compressed: return zlib-compressed pack.
         :param check: check molecules for format restrictions.
         """
+        if not issubclass(self._get_graph_cls(), MoleculeContainer):
+            raise TypeError('packing supported only for MoleculeContainer reactions')
+
         data = b''.join((bytearray((1, len(self.reactants), len(self.reagents), len(self.products))),
                          *(m.pack(compressed=False, check=check) for m in self.molecules())))
         if compressed:
@@ -284,7 +338,19 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
             !b - Disable bonds tokens.
             !x - Disable CXSMILES extension.
             !z - Disable charge representation.
+            Query-only reactions return SMARTS and respect only !c (keep order).
         """
+        graph_cls = self._get_graph_cls()
+        if issubclass(graph_cls, QueryContainer):
+            keep_order = '!c' in format_spec
+            sig = []
+            for ml in (self.reactants, self.reagents, self.products):
+                if keep_order:
+                    sig.append('.'.join(str(m) for m in ml))
+                else:
+                    sig.append('.'.join(sorted(str(m) for m in ml)))
+            return '>'.join(sig)
+
         sig = []
         count = 0
         contract = []
@@ -297,9 +363,10 @@ class ReactionContainer(StandardizeReaction, Mapping, Calculate2DReaction, Depic
 
             ss = []
             for m, s, o in mso:
-                if m.connected_components_count > 1:
-                    contract.append([str(x + count) for x in range(m.connected_components_count)])
-                    count += m.connected_components_count
+                components_count = getattr(m, 'connected_components_count', 1)
+                if components_count > 1:
+                    contract.append([str(x + count) for x in range(components_count)])
+                    count += components_count
                 else:
                     count += 1
 

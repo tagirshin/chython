@@ -134,7 +134,7 @@ class DynamicBond:
     def p_order(self) -> Optional[int]:
         return self._p_order
 
-    def copy(self) -> 'DynamicBond':
+    def copy(self, *args, **kwargs) -> 'DynamicBond':
         copy = object.__new__(self.__class__)
         copy._order = self.order
         copy._p_order = self.p_order

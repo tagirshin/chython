@@ -22,6 +22,7 @@ from .bonds import *
 from .cgr import *
 from .molecule import *
 from .query import *
+from .cgr_query import *
 from .reaction import *
 
 
@@ -45,4 +46,4 @@ from_rdkit_molecule = from_rdkit
 
 
 __all__ = [x for x in locals() if x.endswith('Container')]
-__all__.extend(['Bond', 'QueryBond', 'unpack', 'unpach', 'from_rdkit', 'from_rdkit_molecule'])
+__all__.extend(['Bond', 'DynamicBond', 'QueryBond', 'unpack', 'unpach', 'from_rdkit', 'from_rdkit_molecule'])

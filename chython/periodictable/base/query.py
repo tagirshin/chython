@@ -21,6 +21,7 @@ from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Tuple, Type, List, Union, Optional
 from .element import Element
+from .vector import Vector
 from .groups import GroupXVIII
 
 
@@ -44,13 +45,14 @@ def _validate(value, prop):
 
 
 class Query(ABC):
-    __slots__ = ('_neighbors', '_hybridization', '_masked')
+    __slots__ = ('_neighbors', '_hybridization', '_masked', '_xy')
 
     def __init__(self, neighbors: Union[int, Tuple[int, ...], None] = None,
                  hybridization: Union[int, Tuple[int, ...], None] = None, masked: bool = False):
         self.neighbors = neighbors
         self.hybridization = hybridization
         self.masked = masked
+        self._xy = Vector(0., 0.)
 
     @property
     @abstractmethod
@@ -89,6 +91,30 @@ class Query(ABC):
             raise TypeError('hybridization should be int or list or tuple of ints')
 
     @property
+    def x(self) -> float:
+        return self._xy.x
+
+    @x.setter
+    def x(self, value: float):
+        self._xy.x = value
+
+    @property
+    def y(self) -> float:
+        return self._xy.y
+
+    @y.setter
+    def y(self, value: float):
+        self._xy.y = value
+
+    @property
+    def xy(self) -> Vector:
+        return self._xy
+
+    @xy.setter
+    def xy(self, value: Tuple[float, float]):
+        self._xy = Vector(*value)
+
+    @property
     def masked(self):
         return self._masked
 
@@ -102,6 +128,7 @@ class Query(ABC):
         copy = object.__new__(self.__class__)
         copy._neighbors = self.neighbors
         copy._hybridization = self.hybridization
+        copy._xy = Vector(self._xy.x, self._xy.y)
 
         copy._masked = self.masked if full else False
         return copy
@@ -114,11 +141,15 @@ class Query(ABC):
 
 
 class ExtendedQuery(Query, ABC):
-    __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo')
+    __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
+                 '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements')
 
     def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, Tuple[int, ...], None] = None,
                  ring_sizes: Union[int, Tuple[int, ...], None] = None,
-                 implicit_hydrogens: Union[int, Tuple[int, ...], None] = None, stereo: Optional[bool] = None, **kwargs):
+                 implicit_hydrogens: Union[int, Tuple[int, ...], None] = None, stereo: Optional[bool] = None,
+                 total_connectivity: Union[int, Tuple[int, ...], None] = None,
+                 rings_count: Union[int, Tuple[int, ...], None] = None,
+                 charge_not: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.charge = charge
         self.is_radical = is_radical
@@ -126,6 +157,11 @@ class ExtendedQuery(Query, ABC):
         self.ring_sizes = ring_sizes
         self.implicit_hydrogens = implicit_hydrogens
         self.stereo = stereo
+        self.total_connectivity = total_connectivity
+        self.rings_count = rings_count
+        self._charge_not = charge_not
+        self._recursive_smarts = None
+        self._excluded_elements = None
 
     @property
     def charge(self) -> int:
@@ -207,6 +243,43 @@ class ExtendedQuery(Query, ABC):
             raise TypeError('stereo should be bool')
         self._stereo = value
 
+    @property
+    def total_connectivity(self) -> Tuple[int, ...]:
+        return self._total_connectivity
+
+    @total_connectivity.setter
+    def total_connectivity(self, value):
+        self._total_connectivity = _validate(value, 'total_connectivity')
+
+    @property
+    def rings_count(self) -> Tuple[int, ...]:
+        return self._rings_count
+
+    @rings_count.setter
+    def rings_count(self, value):
+        self._rings_count = _validate(value, 'rings_count')
+
+    @property
+    def charge_not(self) -> Optional[str]:
+        return self._charge_not
+
+    @property
+    def recursive_smarts(self):
+        """Recursive SMARTS constraints on this atom.
+
+        Returns list of (positive: bool, sub_query: QueryContainer, root: int) tuples,
+        or None if no recursive constraints.
+        """
+        return self._recursive_smarts
+
+    @property
+    def excluded_elements(self):
+        """Excluded element constraints (e.g., from !#6 or !N in SMARTS).
+
+        Returns tuple of element symbols/atomic numbers, or None.
+        """
+        return self._excluded_elements
+
     def copy(self, full=False):
         copy = super().copy(full=full)
         copy._charge = self.charge
@@ -214,6 +287,11 @@ class ExtendedQuery(Query, ABC):
         copy._heteroatoms = self.heteroatoms
         copy._implicit_hydrogens = self.implicit_hydrogens
         copy._ring_sizes = self.ring_sizes
+        copy._total_connectivity = self.total_connectivity
+        copy._rings_count = self._rings_count
+        copy._charge_not = self._charge_not
+        copy._recursive_smarts = self._recursive_smarts
+        copy._excluded_elements = self._excluded_elements
 
         copy._stereo = self.stereo if full else None
         return copy
@@ -256,7 +334,20 @@ class AnyElement(ExtendedQuery):
         """
         if not isinstance(other, Element):
             return False
-        if self.charge != other.charge:
+        if self._excluded_elements:
+            for ex in self._excluded_elements:
+                if isinstance(ex, int):
+                    if other.atomic_number == ex:
+                        return False
+                elif other.atomic_symbol == ex:
+                    return False
+        if self._charge_not == 'positive':
+            if other.charge > 0:
+                return False
+        elif self._charge_not == 'negative':
+            if other.charge < 0:
+                return False
+        elif self.charge != other.charge:
             return False
         if self.is_radical != other.is_radical:
             return False
@@ -273,6 +364,10 @@ class AnyElement(ExtendedQuery):
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:
+            return False
+        if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
+            return False
+        if self._rings_count and other.rings_count not in self._rings_count:
             return False
         return True
 
@@ -318,7 +413,13 @@ class ListElement(ExtendedQuery):
             return False
         if other.atomic_number not in self.atomic_numbers:
             return False
-        if self.charge != other.charge:
+        if self._charge_not == 'positive':
+            if other.charge > 0:
+                return False
+        elif self._charge_not == 'negative':
+            if other.charge < 0:
+                return False
+        elif self.charge != other.charge:
             return False
         if self.is_radical != other.is_radical:
             return False
@@ -335,6 +436,10 @@ class ListElement(ExtendedQuery):
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:
+            return False
+        if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
+            return False
+        if self._rings_count and other.rings_count not in self._rings_count:
             return False
         return True
 
@@ -419,6 +524,8 @@ class QueryElement(ExtendedQuery, ABC):
         query = cls.from_atomic_number(atom.atomic_number)(atom.isotope)
         query._charge = atom.charge
         query._is_radical = atom.is_radical
+        if hasattr(atom, '_xy'):
+            query._xy = Vector(atom._xy.x, atom._xy.y)
 
         if neighbors:
             query._neighbors = (atom.neighbors,)
@@ -447,7 +554,13 @@ class QueryElement(ExtendedQuery, ABC):
             return False
         if self.atomic_number != other.atomic_number:
             return False
-        if self.charge != other.charge:
+        if self._charge_not == 'positive':
+            if other.charge > 0:
+                return False
+        elif self._charge_not == 'negative':
+            if other.charge < 0:
+                return False
+        elif self.charge != other.charge:
             return False
         if self.is_radical != other.is_radical:
             return False
@@ -466,6 +579,10 @@ class QueryElement(ExtendedQuery, ABC):
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:
+            return False
+        if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
+            return False
+        if self._rings_count and other.rings_count not in self._rings_count:
             return False
         return True
 

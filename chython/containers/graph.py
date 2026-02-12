@@ -27,7 +27,7 @@ Bond = TypeVar('Bond')
 
 
 class Graph(Generic[Atom, Bond], ABC):
-    __slots__ = ('_atoms', '_bonds', '__dict__')
+    __slots__ = ('_atoms', '_bonds', '__dict__', '__weakref__')
     __class_cache__ = {}
 
     _atoms: Dict[int, Atom]
@@ -65,8 +65,7 @@ class Graph(Generic[Atom, Bond], ABC):
 
     def has_bond(self, n: int, m: int) -> bool:
         try:
-            self._bonds[n]  # check if atom exists
-            return n in self._bonds[m]
+            return m in self._bonds[n]
         except KeyError:
             raise AtomNotFound
 
@@ -117,6 +116,40 @@ class Graph(Generic[Atom, Bond], ABC):
         self._bonds[n][m] = self._bonds[m][n] = bond
         self.flush_cache()
 
+    def delete_atom(self, n: int):
+        """
+        Delete atom and all its bonds.
+        """
+        if n not in self._atoms:
+            # Or just return if non-existent atom deletion is not an error
+            raise AtomNotFound(f"Atom {n} not found for deletion")
+        
+        # Delete bonds associated with atom n
+        # Iterate over a copy of keys for neighbors, as dicts will change
+        for m in list(self._bonds.get(n, {}).keys()): 
+            # This relies on delete_bond to remove from both self._bonds[n] and self._bonds[m]
+            self._delete_bond_internal(n, m) # Use a helper to avoid flush_cache multiple times
+        
+        if n in self._bonds: # Check if entry exists before deleting
+            del self._bonds[n]
+        del self._atoms[n]
+        self.flush_cache() # Flush once after all operations
+
+    def delete_bond(self, n: int, m: int):
+        """
+        Delete bond between atom n and m.
+        """
+        self._delete_bond_internal(n,m)
+        self.flush_cache() # Flush once
+
+    def _delete_bond_internal(self, n: int, m: int): # Helper to avoid repeated checks/flushes
+        """Internal bond deletion without flushing cache."""
+        if n not in self._bonds or m not in self._bonds.get(n, {}):
+            # Or just return if non-existent bond deletion is not an error
+            raise BondNotFound(f"Bond between {n} and {m} not found for deletion")
+        del self._bonds[n][m]
+        del self._bonds[m][n]
+
     def copy(self):
         """
         copy of graph
@@ -159,7 +192,7 @@ class Graph(Generic[Atom, Bond], ABC):
             if not remap:
                 raise MappingError('mapping of graphs is not disjoint')
             other = other.copy()
-            other.remap({n: i for i, n in enumerate(other, start=max(self._atoms) + 1)})
+            other.remap({n: i for i, n in enumerate(other, start=max(self._atoms, default=0) + 1)})
         else:
             other = other.copy()  # make a copy
         u = self.copy() if copy else self
@@ -195,6 +228,34 @@ class Graph(Generic[Atom, Bond], ABC):
 
     def __bool__(self):
         return bool(self._atoms)
+
+    def __getstate__(self):
+        """Return state as a dictionary for pickling."""
+        state = {}
+        # walk MRO to gather all slots (base + subclass) excluding __dict__/__weakref__
+        for cls in self.__class__.mro():
+            for slot in getattr(cls, '__slots__', ()):
+                if slot in ('__dict__', '__weakref__'):
+                    continue
+                if hasattr(self, slot):
+                    state[slot] = getattr(self, slot)
+        # include dict-backed attributes if present
+        if hasattr(self, '__dict__'):
+            state.update(self.__dict__)
+        return state
+
+    def __setstate__(self, state):
+        """Restore state from dictionary."""
+        for slot, value in state.items():
+            # avoid overwriting __dict__ or __weakref__
+            if slot in ('__dict__', '__weakref__'):
+                continue
+            setattr(self, slot, value)
+        # Fallback for legacy states missing core slots
+        if not hasattr(self, '_atoms'):
+            self._atoms = {}
+        if not hasattr(self, '_bonds'):
+            self._bonds = {}
 
 
 __all__ = ['Graph']

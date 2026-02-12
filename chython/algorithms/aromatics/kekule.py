@@ -176,9 +176,23 @@ class Kekule:
                         rings[m].remove(n)
                         bonds[n][m]._order = 1
 
-        if any(len(ms) not in (2, 3) for ms in rings.values()):
-            raise InvalidAromaticRing('not in ring aromatic bond or hypercondensed rings: '
-                                      f'{{{", ".join(str(n) for n, ms in rings.items() if len(ms) not in (2, 3))}}}')
+        # clean up dangling aromatic atoms (0 or 1 aromatic neighbors)
+        # that result from removing non-ring aromatic bonds
+        while True:
+            dangling = [n for n, ms in rings.items() if len(ms) < 2]
+            if not dangling:
+                break
+            for n in dangling:
+                for m in rings.pop(n):
+                    rings[m].remove(n)
+                    bonds[n][m]._order = 1
+
+        if not rings:
+            return rings, pyrroles, set()
+
+        if any(len(ms) > 3 for ms in rings.values()):
+            raise InvalidAromaticRing('hypercondensed rings: '
+                                      f'{{{", ".join(str(n) for n, ms in rings.items() if len(ms) > 3)}}}')
 
         # get double bonded ring atoms
         double_bonded = {n for n, ms in double_bonded.items() if ms and n in rings}

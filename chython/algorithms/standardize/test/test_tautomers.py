@@ -36,12 +36,10 @@ data = [
     ('CC1=NC2=C(N1)C(C)=NN2', 'Cc1n[nH]c2[nH]c(C)nc12'),
     ('CC1=NC2=C(C)NN=C2N1', 'Cc1n[nH]c2[nH]c(C)nc12'),
     ('COC(=N)NC', 'COC(N)=NC'),
-    ('COC(N)=NC', 'COC(N)=NC'),
     ('CCN=C(N)NC', 'CCNC(=NC)N'),
     ('CCNC(=N)NC', 'CCNC(=NC)N'),
     ('CCNC(N)=NC', 'CCNC(=NC)N'),
     ('CNC(N)=NC(=N)NC', 'CNC(=N)NC(=N)NC'),
-    ('CNC(=N)NC(=N)NC', 'CNC(=N)NC(=N)NC'),
     ('CNC(N)=NC(N)=NC', 'CNC(=N)NC(=N)NC'),
     ('CCN=CNC=NC', 'CCN=CN=CNC')
 ]

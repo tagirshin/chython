@@ -17,17 +17,84 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from abc import ABC, abstractmethod
-from typing import Type, Optional
+from typing import Tuple, Type, Optional
 from .element import Element
+from .vector import Vector
+from .core import Core
+from ...exceptions import IsNotConnectedAtom
+
+class Dynamic(Core):
+    __slots__ = ()
+
+    @Core.charge.setter
+    def charge(self, charge):
+        try:
+            g = self._graph()
+            g._charges[self._map] = g._validate_charge(charge)
+            g.flush_cache()
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @Core.is_radical.setter
+    def is_radical(self, is_radical):
+        try:
+            g = self._graph()
+            g._radicals[self._map] = g._validate_radical(is_radical)
+            g.flush_cache()
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @property
+    def p_charge(self) -> int:
+        try:
+            return self._graph()._p_charges[self._map]
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @p_charge.setter
+    def p_charge(self, charge):
+        try:
+            g = self._graph()
+            g._p_charges[self._map] = g._validate_charge(charge)
+            g.flush_cache()
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @property
+    def p_is_radical(self) -> bool:
+        try:
+            return self._graph()._p_radicals[self._map]
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @p_is_radical.setter
+    def p_is_radical(self, is_radical):
+        try:
+            g = self._graph()
+            g._p_radicals[self._map] = g._validate_radical(is_radical)
+            g.flush_cache()
+        except AttributeError:
+            raise IsNotConnectedAtom
+
+    @property
+    def p_hybridization(self):
+        """
+        Product state hybridization of atom
+        """
+        try:
+            return self._graph()._p_hybridizations[self._map]
+        except AttributeError:
+            raise IsNotConnectedAtom
 
 
 class DynamicElement(ABC):
-    __slots__ = ('_charge', '_is_radical', '_p_charge', '_p_is_radical', '_isotope')
+    __slots__ = ('_charge', '_is_radical', '_p_charge', '_p_is_radical', '_isotope', '_xy')
 
-    def __init__(self, isotope: Optional[int]):
+    def __init__(self, isotope: Optional[int] = None):
         self._isotope = isotope
         self._charge = self._p_charge = 0
         self._is_radical = self._p_is_radical = False
+        self._xy = Vector(0., 0.)
 
     @property
     def isotope(self):
@@ -45,7 +112,7 @@ class DynamicElement(ABC):
         """
 
     @classmethod
-    def from_symbol(cls, symbol: str) -> Type['DynamicElement']:
+    def from_symbol(cls, symbol: str, *, isotope: Optional[int] = None, **_) -> Type['DynamicElement']:
         """
         get DynamicElement class by its symbol
         """
@@ -56,14 +123,16 @@ class DynamicElement(ABC):
         return element
 
     @classmethod
-    def from_atomic_number(cls, number: int) -> Type['DynamicElement']:
+    def from_atomic_number(cls, number: Optional[int] = None, *, atomic_number: Optional[int] = None, **_) -> Type['DynamicElement']:
         """
         get DynamicElement class by its number
         """
+        if atomic_number is not None:
+            number = atomic_number
         try:
             element = next(x for x in DynamicElement.__subclasses__() if x.atomic_number.fget(None) == number)
         except StopIteration:
-            raise ValueError(f'DynamicElement with number "{number}" not found')
+            raise ValueError(f'DynamicElement with number \"{number}\" not found')
         return element
 
     @classmethod
@@ -71,12 +140,18 @@ class DynamicElement(ABC):
         """
         get DynamicElement object from Element object
         """
+        if isinstance(atom, DynamicElement):
+            return atom.copy()
         if not isinstance(atom, Element):
             raise TypeError('Element expected')
         dynamic = object.__new__(cls.from_atomic_number(atom.atomic_number))
         dynamic._isotope = atom.isotope
         dynamic._charge = dynamic._p_charge = atom.charge
         dynamic._is_radical = dynamic._p_is_radical = atom.is_radical
+        if hasattr(atom, '_xy'):
+            dynamic._xy = Vector(atom._xy.x, atom._xy.y)
+        else:
+            dynamic._xy = Vector(0., 0.)
         return dynamic
 
     @classmethod
@@ -96,7 +171,35 @@ class DynamicElement(ABC):
         dynamic._p_charge = atom2.charge
         dynamic._is_radical = atom1.is_radical
         dynamic._p_is_radical = atom2.is_radical
+        if hasattr(atom1, '_xy'):
+            dynamic._xy = Vector(atom1._xy.x, atom1._xy.y)
+        else:
+            dynamic._xy = Vector(0., 0.)
         return dynamic
+
+    @property
+    def x(self) -> float:
+        return self._xy.x
+
+    @x.setter
+    def x(self, value: float):
+        self._xy.x = value
+
+    @property
+    def y(self) -> float:
+        return self._xy.y
+
+    @y.setter
+    def y(self, value: float):
+        self._xy.y = value
+
+    @property
+    def xy(self) -> Vector:
+        return self._xy
+
+    @xy.setter
+    def xy(self, value: Tuple[float, float]):
+        self._xy = Vector(*value)
 
     @property
     def charge(self) -> int:
@@ -133,17 +236,18 @@ class DynamicElement(ABC):
         """
         return self.charge != self.p_charge or self.is_radical != self.p_is_radical
 
-    def copy(self):
+    def copy(self, *_, **__):
         copy = object.__new__(self.__class__)
         copy._isotope = self.isotope
         copy._charge = self.charge
         copy._is_radical = self.is_radical
         copy._p_is_radical = self.p_is_radical
         copy._p_charge = self.p_charge
+        copy._xy = Vector(self._xy.x, self._xy.y)
         return copy
 
     def __copy__(self):
         return self.copy()
 
 
-__all__ = ['DynamicElement']
+__all__ = ['DynamicElement', 'Dynamic']
