@@ -1,5 +1,5 @@
 [tool.poetry]
-name = 'chython'
+name = 'chython-synplan'
 version = '1.93'
 description = 'Library for processing molecules and reactions in python way'
 authors = ['Ramil Nugmanov <nougmanoff@protonmail.com>']
