@@ -1,4 +1,4 @@
-name: Build Python packages
+name: Build and publish Python packages
 
 on:
   release:
@@ -6,28 +6,60 @@ on:
   workflow_dispatch:
 
 jobs:
-  binary:
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build sdist
+        run: pipx run build --sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-sdist
+          path: dist/*.tar.gz
+
+  build_wheels:
+    name: Build wheels (${{ matrix.os }}, ${{ matrix.cibw_archs }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-22.04]
-        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - os: ubuntu-latest
+            cibw_archs: "x86_64"
+          - os: windows-latest
+            cibw_archs: "AMD64"
+          - os: macos-13
+            cibw_archs: "x86_64"
+          - os: macos-14
+            cibw_archs: "arm64"
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip poetry twine
-    - name: Build wheel
-      run: |
-        poetry build -f wheel
-    - name: Publish package
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      shell: bash
-      run: |
-        twine upload -u __token__ -p ${{ secrets.PYPI_API_TOKEN }} --non-interactive --skip-existing dist/*
+      - uses: actions/checkout@v4
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.22
+        env:
+          CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cibw-wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          path: ./wheelhouse/*.whl
+
+  publish:
+    name: Publish to PyPI
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: cibw-*
+          path: dist
+          merge-multiple: true
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
