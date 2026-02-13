@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build sdist
-        run: pip install build && python -Im build --sdist
+        run: cd /tmp && pipx run build --sdist $GITHUB_WORKSPACE
       - name: List dist contents
         run: ls -laR dist/
       - uses: actions/upload-artifact@v4
