@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: pip install poetry-core setuptools "cython>=3.0.5"
       - name: Build sdist
         run: pipx run build --sdist
       - uses: actions/upload-artifact@v4
@@ -29,7 +31,7 @@ jobs:
             cibw_archs: "x86_64"
           - os: windows-latest
             cibw_archs: "AMD64"
-          - os: macos-13
+          - os: macos-15-large
             cibw_archs: "x86_64"
           - os: macos-14
             cibw_archs: "arm64"
@@ -41,6 +43,7 @@ jobs:
           CIBW_BUILD: "cp310-* cp311-* cp312-* cp313-* cp314-*"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
+          CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=13.0"
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
