@@ -14,7 +14,11 @@ classifiers=[
     'Operating System :: OS Independent',
     'Programming Language :: Python',
     'Programming Language :: Python :: 3 :: Only',
-    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
     'Topic :: Scientific/Engineering',
     'Topic :: Scientific/Engineering :: Chemistry',
     'Topic :: Scientific/Engineering :: Information Analysis',
@@ -37,13 +41,13 @@ cachedmethods = '>=0.1.4'
 lazy-object-proxy = '>=1.6'
 lxml = '>=4.1'
 mini-racer = {version = '>=0.12.4', optional = true}
-chytorch-rxnmap = {version = '>=1.4', optional = true}
+chytorch-rxnmap-synplan = {version = '>=1.7', optional = true}
 rdkit = {version = '>=2023.9', optional = true}
 pyppeteer = {version = '>=2.0.0', optional = true}
 numpy = ">=2.0.0"
 
 [tool.poetry.extras]
-mapping = ['chytorch-rxnmap']
+mapping = ['chytorch-rxnmap-synplan']
 rdkit = ['rdkit']
 png = ['pyppeteer']
 racer-default = ['mini-racer']
