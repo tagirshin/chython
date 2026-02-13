@@ -12,9 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install build dependencies
-        run: pip install poetry-core setuptools "cython>=3.0.5"
+        run: pip install build poetry-core setuptools "cython>=3.0.5"
       - name: Build sdist
-        run: pipx run build --sdist
+        run: python -m build --sdist --no-isolation
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-sdist
