@@ -27,10 +27,29 @@ from ...periodictable import ListElement, QueryElement
 
 
 cx_radicals = compile(r'\^[1-7]:[0-9]+(?:,[0-9]+)*')
+aliphatic_hybridizations = [1, 2, 3]
+organic_aromatic_elements = {'B', 'C', 'N', 'O', 'P', 'S', 'As', 'Se', 'Te'}
 
 # AD-HOC for masked atoms in SMARTS
 # not thread safe
 global_free_masked = count(10 ** 9 + 1)
+
+
+def _infer_aliphatic_hybridization(atom: dict):
+    """Apply SMARTS uppercase organic atom aliphaticity to query atoms."""
+    if 'hybridization' in atom:
+        return
+
+    element = atom.get('element')
+    if isinstance(element, str):
+        elements = (element,)
+    elif isinstance(element, list) and all(isinstance(x, str) for x in element):
+        elements = tuple(element)
+    else:
+        return
+
+    if elements and all(x in organic_aromatic_elements for x in elements):
+        atom['hybridization'] = aliphatic_hybridizations
 
 
 def _parse_mol_smarts(data: str) -> QueryContainer:
@@ -53,6 +72,7 @@ def _parse_mol_smarts(data: str) -> QueryContainer:
     mapping = {}
     free = count(max(a.get('parsed_mapping', 0) for a in parsed['atoms']) + 1)
     for i, a in enumerate(parsed['atoms']):
+        _infer_aliphatic_hybridization(a)
         mapping[i] = n = a.pop('parsed_mapping', 0) or next(global_free_masked if a.get('masked') else free)
         e = a.pop('element')
         charge_not = a.pop('charge_not', None)

@@ -150,9 +150,19 @@ def test_daylight_smarts_charged_aromatics():
     n_oxide = smiles('c1cc[n+]([O-])cc1')  # pyridine N-oxide
     
     # Test patterns for charged systems
-    charged_n = smarts('[N+]')  # positively charged nitrogen
+    charged_n = smarts('[n+]')  # positively charged aromatic nitrogen
     assert charged_n.is_substructure(pyridinium)
     assert charged_n.is_substructure(n_oxide)
+
+
+def test_daylight_smarts_aliphatic_uppercase_atoms():
+    benzene = smiles('c1ccccc1')
+    phenol = smiles('c1ccccc1O')
+
+    assert not smarts('[C]').is_substructure(benzene)
+    assert not smarts('[C;D3]-[O;D1]').is_substructure(phenol)
+    assert smarts('[c]').is_substructure(benzene)
+    assert smarts('[#6]').is_substructure(benzene)
 
 
 def test_daylight_smarts_drug_patterns():

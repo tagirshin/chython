@@ -38,3 +38,16 @@ def test_transformer(patterns, products, source, result):
     reactor = Reactor([smarts(x) for x in patterns], [smarts(x) for x in products])
     out = {format(smiles(x), 'h') for x in result}
     assert {format(x, 'h') for x in next(reactor(*(smiles(x) for x in source))).products} == out
+
+
+def test_reactor_does_not_match_aliphatic_carbon_to_aromatic_carbon():
+    rule_rxn = smarts('[C;D3:1]-[O;D1:2]>>[C;D3:1]-[O;D2:2]-[C;D1:3]')
+    reactor = Reactor(patterns=tuple(rule_rxn.reactants), products=tuple(rule_rxn.products), delete_atoms=False)
+    reaction = smiles(
+        '[cH:18]1[cH:17][c:16]([cH:21][cH:20][cH:19]1)[CH:15]2[c:7]3[cH:8][c:9]([c:11]([c:13]([c:6]3[C:4]([CH:3]2[CH2:2][CH3:1])=[O:5])[Cl:14])[Cl:12])[O:10][CH3:22]'
+        '>>'
+        '[cH:18]1[cH:17][c:16]([cH:21][cH:20][cH:19]1)[CH:15]2[c:7]3[cH:8][c:9]([c:11]([Cl:12])[c:13]([Cl:14])[c:6]3[C:4](=[O:5])[CH:3]2[CH2:2][CH3:1])[OH:10]'
+    )
+
+    assert list(rule_rxn.reactants[0].get_mapping(reaction.products[0])) == []
+    assert list(reactor(reaction.products[0])) == []
