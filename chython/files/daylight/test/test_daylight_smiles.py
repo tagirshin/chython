@@ -18,6 +18,7 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 import pytest
+from chython import smiles
 from chython.exceptions import IncorrectSmiles
 from chython.files.daylight.parser import parser
 from chython.files.daylight.tokenize import smiles_tokenize
@@ -65,9 +66,43 @@ def test_daylight_smiles_charged():
     # Test charged species
     result = parser(list(smiles_tokenize('[NH4+]')), True)
     assert len(result['atoms']) == 1
-    
+
     result = parser(list(smiles_tokenize('[OH-]')), True)
     assert len(result['atoms']) == 1
+
+
+def test_daylight_reaction_normalizes_chromium_trioxide_reagent():
+    reaction = smiles('C>[O-2].[O-2].[O-2].[Cr+6]>C')
+
+    assert [str(x) for x in reaction.reagents] == ['O=[Cr](=O)=O']
+    assert reaction.meta['chython_parsing_log'] == [
+        'normalized oxide fragments: [O-2].[O-2].[O-2].[Cr+6] -> O=[Cr](=O)=O'
+    ]
+
+
+def test_daylight_reaction_normalizes_mapped_chromium_trioxide_bundle():
+    reaction = smiles('[O-2:1].[Cr+6:4].[O-2:2].[O-2:3]>>[O:1]=[Cr:4](=[O:2])=[O:3]')
+
+    assert format(reaction.reactants[0], 'm') == '[O:1]=[Cr:4](=[O:2])=[O:3]'
+
+
+@pytest.mark.parametrize(('source', 'reagent'), (
+    ('[O-2].[O-2].[O-2].[U+6]', 'O=[U](=O)=O'),
+    ('[O-2].[O-2].[O-2].[O-2].[O-2].[V+5].[V+5]', 'O=[V](=O)O[V](=O)=O'),
+    ('[O-2].[O-2].[O-2].[O-2].[O-2].[Nb+5].[Nb+5]', 'O=[Nb](=O)O[Nb](=O)=O'),
+    ('[O-2].[O-2].[O-2].[O-2].[O-2].[Ta+5].[Ta+5]', 'O=[Ta](=O)O[Ta](=O)=O'),
+))
+def test_daylight_reaction_normalizes_high_valent_oxide_bundles(source, reagent):
+    reaction = smiles(f'C>{source}>C')
+
+    assert [str(x) for x in reaction.reagents] == [reagent]
+
+
+def test_daylight_reaction_drops_standalone_phosphorus_pentahydride():
+    reaction = smiles('C.[PH5]>O>C')
+
+    assert [str(x) for x in reaction.reactants] == ['C']
+    assert reaction.meta['chython_parsing_log'] == ['ignored unsupported standalone fragment: [PH5]']
 
 
 def test_daylight_smiles_aromatic():
@@ -96,6 +131,6 @@ def test_daylight_smiles_stereo():
     # Test stereochemistry
     result = parser(list(smiles_tokenize('C/C=C/C')), True)
     assert result['stereo_bonds']
-    
+
     result = parser(list(smiles_tokenize('C/C=C\\C')), True)
-    assert result['stereo_bonds'] 
+    assert result['stereo_bonds']

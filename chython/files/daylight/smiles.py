@@ -31,6 +31,79 @@ cx_fragments = compile(r'f:(?:[0-9]+(?:\.[0-9]+)+)(?:,(?:[0-9]+(?:\.[0-9]+)+))*'
 cx_radicals = compile(r'\^[1-7]:(\d+(?:,\d+)*)')
 cx_stereo_rel = compile(r'([o&])(\d+):(\d+(?:,\d+)*)')
 cx_stereo_abs = compile(r'a:(\d+(?:,\d+)*)')
+oxide_metal_atom = compile(r'^\[(Cr|U|V|Nb|Ta)\+([56])(?::([0-9]{1,4}))?\]$')
+oxide_atom = compile(r'^\[O-2(?::([0-9]{1,4}))?\]$')
+
+
+def _mapped_atom(element: str, mapping: Optional[str]) -> str:
+    if mapping is None:
+        return element if element == 'O' else f'[{element}]'
+    return f'[{element}:{mapping}]'
+
+
+def _metal_trioxide(element: str, oxygen_maps: list[Optional[str]], metal_maps: list[Optional[str]]) -> str:
+    return (f'{_mapped_atom("O", oxygen_maps[0])}={_mapped_atom(element, metal_maps[0])}'
+            f'(={_mapped_atom("O", oxygen_maps[1])})={_mapped_atom("O", oxygen_maps[2])}')
+
+
+def _dimetal_pentoxide(element: str, oxygen_maps: list[Optional[str]], metal_maps: list[Optional[str]]) -> str:
+    return (f'{_mapped_atom("O", oxygen_maps[0])}={_mapped_atom(element, metal_maps[0])}'
+            f'(={_mapped_atom("O", oxygen_maps[1])}){_mapped_atom("O", oxygen_maps[2])}'
+            f'{_mapped_atom(element, metal_maps[1])}(={_mapped_atom("O", oxygen_maps[3])})='
+            f'{_mapped_atom("O", oxygen_maps[4])}')
+
+
+oxide_bundle_rules = {
+    ('Cr', 6): (1, 3, _metal_trioxide),
+    ('U', 6): (1, 3, _metal_trioxide),
+    ('V', 5): (2, 5, _dimetal_pentoxide),
+    ('Nb', 5): (2, 5, _dimetal_pentoxide),
+    ('Ta', 5): (2, 5, _dimetal_pentoxide),
+}
+
+
+def _normalize_oxide_fragments(fragments: list[str], log: list[str]) -> list[str]:
+    metals = {}
+    oxides = []
+    for n, fragment in enumerate(fragments):
+        if m := oxide_metal_atom.fullmatch(fragment):
+            element, charge, mapping = m.groups()
+            key = element, int(charge)
+            if key in oxide_bundle_rules:
+                metals.setdefault(key, []).append((n, mapping))
+        elif m := oxide_atom.fullmatch(fragment):
+            oxides.append((n, m.group(1)))
+
+    if not metals or len(oxides) < 3:
+        return fragments
+
+    normalized: list[Optional[str]] = fragments.copy()
+    consumed_oxides = 0
+    for (element, charge), metal_atoms in metals.items():
+        metal_count, oxide_count, formatter = oxide_bundle_rules[(element, charge)]
+        consumed_metals = 0
+        while len(metal_atoms) - consumed_metals >= metal_count and len(oxides) - consumed_oxides >= oxide_count:
+            selected_metals = metal_atoms[consumed_metals:consumed_metals + metal_count]
+            selected_oxides = oxides[consumed_oxides:consumed_oxides + oxide_count]
+            consumed_metals += metal_count
+            consumed_oxides += oxide_count
+            used = selected_oxides + selected_metals
+            insert_index = min(n for n, _ in used)
+            source = '.'.join(fragments[n] for n, _ in sorted(used))
+            replacement = formatter(element, [m for _, m in selected_oxides], [m for _, m in selected_metals])
+            for n, _ in used:
+                normalized[n] = None
+            normalized[insert_index] = replacement
+            log.append(f'normalized oxide fragments: {source} -> {replacement}')
+
+    return [x for x in normalized if x is not None]
+
+
+def _drop_phosphorus_pentahydride_fragments(fragments: list[str], log: list[str]) -> list[str]:
+    if '[PH5]' not in fragments:
+        return fragments
+    log.append('ignored unsupported standalone fragment: [PH5]')
+    return [x for x in fragments if x != '[PH5]']
 
 
 def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: bool = False,
@@ -140,6 +213,10 @@ def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: 
             record['reactants'] = [x for x in new_molecules[:lr] if x is not None]
             record['products'] = [x for x in new_molecules[-lp:] if x is not None]
             record['reagents'] = [x for x in new_molecules[lr: -lp] if x is not None]
+
+        for k in ('reactants', 'products', 'reagents'):
+            record[k] = _drop_phosphorus_pentahydride_fragments(record[k], log)
+            record[k] = _normalize_oxide_fragments(record[k], log)
 
         for k in ('reactants', 'products', 'reagents'):
             tmp = []
