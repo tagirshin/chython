@@ -33,12 +33,30 @@ cx_stereo_rel = compile(r'([o&])(\d+):(\d+(?:,\d+)*)')
 cx_stereo_abs = compile(r'a:(\d+(?:,\d+)*)')
 oxide_metal_atom = compile(r'^\[(Cr|U|V|Nb|Ta)\+([56])(?::([0-9]{1,4}))?\]$')
 oxide_atom = compile(r'^\[O-2(?::([0-9]{1,4}))?\]$')
+oxyhalide_atom = compile(r'^(O|\[O:([0-9]{1,4})\])\((Cl|Br|\[(Cl|Br):([0-9]{1,4})\])\)'
+                         r'(Cl|Br|\[(Cl|Br):([0-9]{1,4})\])$')
 
 
 def _mapped_atom(element: str, mapping: Optional[str]) -> str:
     if mapping is None:
         return element if element == 'O' else f'[{element}]'
     return f'[{element}:{mapping}]'
+
+
+def _mapped_plain_atom(element: str, mapping: Optional[str]) -> str:
+    return element if mapping is None else f'[{element}:{mapping}]'
+
+
+def _parse_oxyhalide(fragment: str) -> Optional[tuple[str, Optional[str], list[Optional[str]]]]:
+    match = oxyhalide_atom.fullmatch(fragment)
+    if match is None:
+        return None
+    _, oxygen_map, halogen1, bracketed_halogen1, halogen_map1, halogen2, bracketed_halogen2, halogen_map2 = match.groups()
+    element1 = bracketed_halogen1 or halogen1
+    element2 = bracketed_halogen2 or halogen2
+    if element1 != element2:
+        return None
+    return element1, oxygen_map, [halogen_map1, halogen_map2]
 
 
 def _metal_trioxide(element: str, oxygen_maps: list[Optional[str]], metal_maps: list[Optional[str]]) -> str:
@@ -104,6 +122,33 @@ def _drop_phosphorus_pentahydride_fragments(fragments: list[str], log: list[str]
         return fragments
     log.append('ignored unsupported standalone fragment: [PH5]')
     return [x for x in fragments if x != '[PH5]']
+
+
+def _phosphorus_oxyhalide(halogen: str, oxygen_map: Optional[str], halogen_maps: list[Optional[str]]) -> str:
+    return (f'{_mapped_plain_atom("O", oxygen_map)}=P({_mapped_plain_atom(halogen, halogen_maps[0])})'
+            f'({_mapped_plain_atom(halogen, halogen_maps[1])}){halogen}')
+
+
+def _normalize_phosphorus_pentahalide_fragments(fragments: list[str], log: list[str]) -> list[str]:
+    phosphorus = [n for n, fragment in enumerate(fragments) if fragment == '[P+5]']
+    oxyhalides = []
+    for n, fragment in enumerate(fragments):
+        if parsed := _parse_oxyhalide(fragment):
+            oxyhalides.append((n, *parsed))
+
+    if not phosphorus or not oxyhalides:
+        return fragments
+
+    normalized: list[Optional[str]] = fragments.copy()
+    for p_index, (oxyhalide_index, halogen, oxygen_map, halogen_maps) in zip(phosphorus, oxyhalides):
+        source = '.'.join(fragments[n] for n in sorted((oxyhalide_index, p_index)))
+        replacement = _phosphorus_oxyhalide(halogen, oxygen_map, halogen_maps)
+        normalized[oxyhalide_index] = None
+        normalized[p_index] = None
+        normalized[min(oxyhalide_index, p_index)] = replacement
+        log.append(f'normalized phosphorus(V) oxyhalide fragments: {source} -> {replacement}')
+
+    return [x for x in normalized if x is not None]
 
 
 def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: bool = False,
@@ -216,6 +261,7 @@ def smiles(data, /, *, ignore: bool = True, remap: bool = False, ignore_stereo: 
 
         for k in ('reactants', 'products', 'reagents'):
             record[k] = _drop_phosphorus_pentahydride_fragments(record[k], log)
+            record[k] = _normalize_phosphorus_pentahalide_fragments(record[k], log)
             record[k] = _normalize_oxide_fragments(record[k], log)
 
         for k in ('reactants', 'products', 'reagents'):

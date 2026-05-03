@@ -105,6 +105,31 @@ def test_daylight_reaction_drops_standalone_phosphorus_pentahydride():
     assert reaction.meta['chython_parsing_log'] == ['ignored unsupported standalone fragment: [PH5]']
 
 
+def test_daylight_reaction_normalizes_phosphorus_oxychloride_fragments():
+    reaction = smiles('C.O(Cl)Cl.[P+5]>O>C')
+
+    assert [str(x) for x in reaction.reactants] == ['C', 'ClP(Cl)(Cl)=O']
+    assert reaction.meta['chython_parsing_log'] == [
+        'normalized phosphorus(V) oxyhalide fragments: O(Cl)Cl.[P+5] -> O=P(Cl)(Cl)Cl'
+    ]
+
+
+def test_daylight_reaction_normalizes_mapped_phosphorus_oxychloride_fragments():
+    reaction = smiles('C.O(Cl)[Cl:2].[P+5]>O>C')
+
+    assert format(reaction.reactants[1], 'm') == '[Cl:2][P:5]([Cl:6])([Cl:7])=[O:4]'
+    assert reaction.meta['chython_parsing_log'] == [
+        'normalized phosphorus(V) oxyhalide fragments: O(Cl)[Cl:2].[P+5] -> O=P(Cl)([Cl:2])Cl'
+    ]
+
+
+def test_daylight_reaction_normalizes_phosphorus_oxybromide_fragments():
+    reaction = smiles('C.O(Br)[Br:2].[P+5]>O>C')
+
+    assert [str(x) for x in reaction.reactants] == ['C', 'BrP(Br)(Br)=O']
+    assert '[Br:2]' in format(reaction.reactants[1], 'm')
+
+
 def test_daylight_smiles_aromatic():
     # Test aromatic SMILES
     result = parser(list(smiles_tokenize('c1ccccc1')), True)
