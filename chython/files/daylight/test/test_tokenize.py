@@ -19,8 +19,8 @@
 #
 from chython.files.daylight.tokenize import smiles_tokenize, smarts_tokenize
 from chython.containers import QueryBond
-from chython.exceptions import IncorrectSmiles
-from pytest import raises
+from chython.exceptions import IncorrectSmarts, IncorrectSmiles
+from pytest import mark, raises
 
 
 def test_smiles_tokenize():
@@ -82,3 +82,40 @@ def test_smarts_tokenize_bonds():
                                               (0, _aliph_C)]
     assert smarts_tokenize('[C]-,=;!@[C]') == [(0, _aliph_C), (12, QueryBond((1, 2), False)),
                                                (0, _aliph_C)]
+
+
+_aliph = {'hybridization': [1, 2, 3], '_default_aliphatic': True}
+
+
+@mark.parametrize('pattern,expected', [
+    # juxtaposition and <&> are the same AND as <;>
+    ('[CX3]', {'element': 'C', 'total_connectivity': [3], **_aliph}),
+    ('[C&X3]', {'element': 'C', 'total_connectivity': [3], **_aliph}),
+    ('[X3C]', {'element': 'C', 'total_connectivity': [3], **_aliph}),
+    ('[OX2H1]', {'element': 'O', 'total_connectivity': [2], 'implicit_hydrogens': [1], **_aliph}),
+    ('[nH]', {'element': 'N', 'implicit_hydrogens': [1], 'hybridization': 4}),
+    ('[C@H]', {'element': 'C', 'implicit_hydrogens': [1], 'stereo': True, **_aliph}),
+    ('[!#6!#1]', {'element': 'A', 'excluded_elements': (6, 1)}),
+    # brackets without an element
+    ('[r5]', {'element': 'A', 'ring_sizes': [5]}),
+    ('[D2]', {'element': 'A', 'neighbors': [2]}),
+    ('[+]', {'element': 'A', 'charge': 1}),
+    ('[N+0]', {'element': 'N', 'charge': 0, **_aliph}),
+    ('[X3,X4]', {'element': 'A', 'total_connectivity': [3, 4]}),
+    # bare primitives take their Daylight default count, bare <r> means any ring
+    ('[r]', {'element': 'A', 'rings_count': list(range(1, 15))}),
+    # H is the hydrogen atom only at the head of the bracket
+    ('[H]', {'element': 'H'}),
+    ('[H;D2]', {'element': 'H', 'neighbors': [2]}),
+    ('[CH]', {'element': 'C', 'implicit_hydrogens': [1], **_aliph}),
+    # two-letter elements win over D/H/R/X primitives
+    ('[Rh]', {'element': 'Rh'}),
+])
+def test_smarts_bracket_primitives(pattern, expected):
+    assert smarts_tokenize(pattern) == [(8 if expected.get('hybridization') == 4 else 0, expected)]
+
+
+def test_smarts_or_across_primitives():
+    # needs an expression tree chython's atom attributes cannot express
+    with raises(IncorrectSmarts):
+        smarts_tokenize('[C,X3]')

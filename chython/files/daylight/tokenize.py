@@ -20,6 +20,7 @@ from re import compile, match, search
 from itertools import permutations
 from ...containers.bonds import QueryBond
 from ...exceptions import IncorrectSmiles, IncorrectSmarts
+from ...periodictable import elements
 
 
 # -,= OR bonds supported
@@ -51,7 +52,7 @@ from ...exceptions import IncorrectSmiles, IncorrectSmarts
 
 
 iso_re = compile(r'^[0-9]+')
-chg_re = compile(r'[+-][1-4+-]?')
+chg_re = compile(r'[+-][0-4+-]?')
 mpp_re = compile(r':[1-9][0-9]*$')
 str_re = compile(r'@[@?]?')
 not_charge_re = compile(r'![+-]')
@@ -60,8 +61,8 @@ replace_dict = {'-': 1, '=': 2, '#': 3, ':': 4, '~': 8}
 not_dict = {'-': [2, 3, 4], '=': [1, 3, 4], '#': [1, 2, 4], ':': [1, 2, 3]}
 atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsbt][a-ik-pr-vy]?)(@@|@)?(H[1-4]?)?([+-][1-4+-]?)?(:[0-9]{1,4})?')
 dyn_atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsb][a-ik-pr-vy]?)([+-0][1-4+-]?(>[+-0][1-4+-]?)?)?([*^](>[*^])?)?')
-charge_dict = {'+': 1, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
-               '-': -1, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
+charge_dict = {'+': 1, '+0': 0, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
+               '-': -1, '-0': 0, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
 dynamic_bonds = {'.>-': (None, 1), '.>=': (None, 2), '.>#': (None, 3), '.>:': (None, 4), '.>~': (None, 8),
                  '->.': (1, None), '->=': (1, 2), '->#': (1, 3), '->:': (1, 4), '->~': (1, 8),
                  '=>.': (2, None), '=>-': (2, 1), '=>#': (2, 3), '=>:': (2, 4), '=>~': (2, 8),
@@ -459,15 +460,109 @@ def _balanced_extract(token, start, n):
     raise IncorrectSmarts('Unbalanced parentheses in recursive SMARTS')
 
 
+_elements = frozenset(elements)
+_two_letter_elements = frozenset(e for e in _elements if len(e) == 2) | {'as', 'se', 'te'}
+_extra_symbols = frozenset(('*', 'A', 'a', 'M', 'c', 'n', 'o', 'p', 's', 'b'))
+# Daylight defaults for a primitive written without a count. Bare <r> means
+# "in a ring of any size", which chython spells <R>.
+_bare_primitives = {'D': 'D1', 'X': 'X1', 'H': 'H1', 'h': 'h1', 'r': 'R'}
+
+
+def _lex_primitives(text):
+    """Split one AND-group of a bracket body into primitive strings.
+
+    Juxtaposition and <&> are the same high-precedence AND in Daylight, so
+    [CX3], [C&X3] and [X3] all have to lex to the same primitives.
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] == '&':
+            i += 1
+            continue
+        start = i
+        if text[i] == '!':
+            i += 1
+            if i == n:
+                raise IncorrectSmarts(f'dangling ! in [{text}]')
+        c = text[i]
+        if c.isdigit():  # isotope
+            while i < n and text[i].isdigit():
+                i += 1
+        elif c in '+-':  # charge
+            i += 1
+            while i < n and (text[i] == c or text[i].isdigit()):
+                i += 1
+        elif c == '@':  # chirality
+            i += 1
+            if i < n and text[i] in '@?':
+                i += 1
+        elif c in '#:':  # atomic number, atom mapping
+            i += 1
+            while i < n and text[i].isdigit():
+                i += 1
+        elif text[i:i + 2] in _two_letter_elements:  # before D/H/R/X: [Dy] [He] [Rh] [Xe]
+            i += 2
+        elif c in 'DXRHrhxzv':
+            i += 1
+            while i < n and text[i].isdigit():
+                i += 1
+        elif c in _elements or c in _extra_symbols:
+            i += 1
+        else:
+            raise IncorrectSmarts(f'invalid primitive in [{text}]')
+        out.append(text[start:i])
+    return out
+
+
+def _is_element_term(term):
+    """Whether every alternative of a term is a positive element symbol."""
+    for p in term.split(','):
+        if p in _extra_symbols or p in _elements or p in _two_letter_elements:
+            continue
+        elif p.startswith('#') and p[1:].isdigit():
+            continue
+        return False
+    return True
+
+
+def _split_primitives(token):
+    """Split a bracket body into chython's ';'-separated primitive terms.
+
+    Daylight puts no constraints on primitive order and does not require an
+    element at all, while the semantics below expect the element term first, so
+    it is hoisted here and defaults to any atom. <,> alternatives of different
+    primitive types have no representation and are rejected.
+    """
+    terms = []
+    for chunk in _split_unnested(token, ';'):
+        groups = [g for g in (_lex_primitives(x) for x in _split_unnested(chunk, ',')) if g]
+        if not groups:
+            continue
+        elif len(groups) == 1:
+            terms.extend(groups[0])
+        elif all(len(g) == 1 for g in groups):
+            terms.append(','.join(g[0] for g in groups))
+        else:
+            raise IncorrectSmarts(f'Unsupported OR statement: {chunk}')
+    terms = [t for t in terms if t[0] not in '@:']  # stereo and mapping are parsed separately
+    element = None
+    for i, t in enumerate(terms):
+        # a bare H opening the bracket is the hydrogen atom, further in it is a count: [CH], [nH]
+        if _is_element_term(t) and (not i or t != 'H'):
+            element = terms.pop(i)
+            break
+    terms = [','.join(_bare_primitives.get(x, x) for x in t.split(',')) for t in terms]
+    return [element or 'A'] + terms
+
+
 def _query_parse(token):
     out = {}
     # Extract recursive SMARTS $() and !$() BEFORE any regex processing
     token, recursive = _extract_recursive(token)
     if recursive:
         out['recursive_smarts'] = recursive
-    if not token:
-        # Pure recursive like [$(NC=O)] — default element to any atom
-        token = 'A'
     if isotope := match(iso_re, token):
         token = token[isotope.end():]  # remove isotope substring
         out['isotope'] = int(isotope.group())
@@ -496,18 +591,10 @@ def _query_parse(token):
         token = token[:stereo.start()] + token[stereo.end():]
         out['stereo'] = stereo.group() == '@'
 
-    # supported only <;> and <,> logic. <&> and silent <&> not supported!
-    primitives = token.split(';')
-    if element := primitives[0]:
-        element = [int(x[1:]) if x.startswith('#') else x for x in element.split(',') if x]
-        if not element:
-            element = 'A'  # all comma-separated sub-elements were recursive $() — default to any
-        elif len(element) == 1:
-            element = element[0]
-    elif recursive:
-        element = 'A'  # pure recursive like [$(NC=O)] — default to any
-    else:
-        raise IncorrectSmarts('Empty element')
+    primitives = _split_primitives(token)
+    element = [int(x[1:]) if x.startswith('#') else x for x in primitives[0].split(',')]
+    if len(element) == 1:
+        element = element[0]
 
     # Handle lowercase aromatic element symbols (c, n, o, p, s, b, se, te)
     # Also handle * (any atom) and a (any aromatic atom)

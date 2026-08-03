@@ -112,15 +112,15 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
 
     Reaction SMARTS format: ``reactants>reagents>products`` or ``reactants>>products``
 
-    * only D, a, h, r and !R atom primitives supported.
+    * only D, X, R, a, h, r, H and !R atom primitives supported.
     * bond order list (max 2) and not bond supported.
     * [not]ring bond supported only in combination with explicit bonds, not bonds and bonds orders lists.
     * mapping, charge and isotopes supported.
     * list of elements supported.
     * A - treats as any element. <A> primitive (aliphatic) ignored.
     * M - treats as any metal
-    * <&> logic operator unsupported.
-    * <;> logic operator is mandatory except (however preferable) for charge, isotope, stereo marks.
+    * <&>, <;> and juxtaposition are all AND. An element is not required: [r5] is any ring atom.
+    * <,> alternatives of different primitive types unsupported: [C,N] and [r5,r6] parse, [C,r5] does not.
     * CXSMARTS radicals supported.
     * masked atom - `chython.Reactor` specific mark for masking reactant atoms from deletion.
 
