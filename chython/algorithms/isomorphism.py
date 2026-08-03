@@ -322,11 +322,15 @@ class QueryIsomorphism(Isomorphism):
 
     @cached_property
     def _has_extended_query(self):
-        return any(
+        if any(
             getattr(a, '_total_connectivity', ()) or getattr(a, '_rings_count', ())
             or getattr(a, '_recursive_smarts', None) or getattr(a, '_excluded_elements', None)
             for _, a in self.atoms()
-        )
+        ):
+            return True
+        # The cython matcher compares concrete bond orders, so the <~> any-bond
+        # mark (order 8) has no representation there and would never match.
+        return any(8 in b.order for *_, b in self.bonds())
 
     def _precompute_recursive(self, other):
         """Precompute allowed molecule atoms for each query atom with recursive SMARTS constraints.
@@ -338,21 +342,24 @@ class QueryIsomorphism(Isomorphism):
             rs = getattr(a, '_recursive_smarts', None)
             if not rs:
                 continue
-            allowed = None
-            for positive, sub_query, root in rs:
+            # Constraints sharing a group are alternatives (OR); groups are ANDed.
+            groups = {}
+            for positive, sub_query, root, group in rs:
                 root_matches = set()
                 for m in sub_query.get_mapping(other, automorphism_filter=False):
                     root_matches.add(m[root])
-                if positive:
-                    if allowed is None:
-                        allowed = root_matches
-                    else:
-                        allowed &= root_matches
+                if not positive:
+                    root_matches = set(other._atoms) - root_matches
+                if group in groups:
+                    groups[group] |= root_matches
                 else:
-                    if allowed is None:
-                        allowed = set(other._atoms) - root_matches
-                    else:
-                        allowed -= root_matches
+                    groups[group] = root_matches
+            allowed = None
+            for root_matches in groups.values():
+                if allowed is None:
+                    allowed = root_matches
+                else:
+                    allowed &= root_matches
             if allowed is not None:
                 recursive_scope[n] = allowed
         return recursive_scope or None

@@ -74,10 +74,10 @@ def _parse_mol_smarts(data: str) -> QueryContainer:
             g.atom(n)._excluded_elements = excluded_elements
         if recursive_smarts_raw:
             compiled = []
-            for positive, inner_str in recursive_smarts_raw:
+            for positive, inner_str, group in recursive_smarts_raw:
                 sub_query = smarts(inner_str)
                 root = next(iter(sub_query))
-                compiled.append((positive, sub_query, root))
+                compiled.append((positive, sub_query, root, group))
             g.atom(n)._recursive_smarts = compiled
 
     for n, m, b in parsed['bonds']:

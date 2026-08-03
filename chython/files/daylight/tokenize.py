@@ -342,12 +342,27 @@ def _atom_parse(token):
                    'implicit_hydrogens': hydrogen, 'stereo': stereo}
 
 
-def _extract_recursive(token):
-    """Extract $() and !$() recursive SMARTS from bracket content.
+def _split_unnested(token, separator):
+    """Split token on separator occurrences outside parentheses and brackets."""
+    parts = []
+    current = []
+    depth = 0
+    for char in token:
+        if char in '([':
+            depth += 1
+        elif char in ')]':
+            depth -= 1
+        if char == separator and depth == 0:
+            parts.append(''.join(current))
+            current = []
+        else:
+            current.append(char)
+    parts.append(''.join(current))
+    return parts
 
-    Returns (cleaned_token, [(positive, inner_smarts), ...]).
-    If no recursive found, returns (token, None).
-    """
+
+def _pull_recursive(token, group):
+    """Pull $() and !$() out of one alternative, tagging them with its OR group."""
     recursive = []
     result = []
     i = 0
@@ -357,19 +372,46 @@ def _extract_recursive(token):
             # positive recursive $()
             i += 2  # skip $(
             inner, i = _balanced_extract(token, i, n)
-            recursive.append((True, inner))
+            recursive.append((True, inner, group))
         elif i < n - 2 and token[i] == '!' and token[i + 1] == '$' and token[i + 2] == '(':
             # negated recursive !$()
             i += 3  # skip !$(
             inner, i = _balanced_extract(token, i, n)
-            recursive.append((False, inner))
+            recursive.append((False, inner, group))
         else:
             result.append(token[i])
             i += 1
+    return ''.join(result), recursive
+
+
+def _extract_recursive(token):
+    """Extract $() and !$() recursive SMARTS from bracket content.
+
+    ``;`` is the lowest-precedence AND in SMARTS and ``,`` is OR, so
+    ``[O;$(a),$(b)]`` means "O and (a or b)". Each recursive constraint is
+    tagged with the index of the ``;``-term it came from: constraints sharing a
+    tag are alternatives to be ORed, and different tags are ANDed. Without the
+    tag every constraint was ANDed, so an alternation like the one above could
+    never match.
+
+    Returns (cleaned_token, [(positive, inner_smarts, group), ...]).
+    If no recursive found, returns (token, None).
+    """
+    recursive = []
+    kept = []
+    for group, term in enumerate(_split_unnested(token, ';')):
+        alternatives = []
+        for alternative in _split_unnested(term, ','):
+            leftover, found = _pull_recursive(alternative, group)
+            recursive.extend(found)
+            if leftover:
+                alternatives.append(leftover)
+        if alternatives:
+            kept.append(','.join(alternatives))
     if not recursive:
         return token, None
     # clean trailing/leading separators from result
-    cleaned = ''.join(result)
+    cleaned = ';'.join(kept)
     # remove trailing semicolons and commas left from extraction
     while cleaned and cleaned[-1] in ';,':
         cleaned = cleaned[:-1]
