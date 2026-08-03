@@ -20,6 +20,7 @@ from re import compile, match, search
 from itertools import permutations
 from ...containers.bonds import QueryBond
 from ...exceptions import IncorrectSmiles, IncorrectSmarts
+from ...periodictable import elements
 
 
 # -,= OR bonds supported
@@ -51,7 +52,7 @@ from ...exceptions import IncorrectSmiles, IncorrectSmarts
 
 
 iso_re = compile(r'^[0-9]+')
-chg_re = compile(r'[+-][1-4+-]?')
+chg_re = compile(r'[+-][0-4+-]?')
 mpp_re = compile(r':[1-9][0-9]*$')
 str_re = compile(r'@[@?]?')
 not_charge_re = compile(r'![+-]')
@@ -60,8 +61,8 @@ replace_dict = {'-': 1, '=': 2, '#': 3, ':': 4, '~': 8}
 not_dict = {'-': [2, 3, 4], '=': [1, 3, 4], '#': [1, 2, 4], ':': [1, 2, 3]}
 atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsbt][a-ik-pr-vy]?)(@@|@)?(H[1-4]?)?([+-][1-4+-]?)?(:[0-9]{1,4})?')
 dyn_atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsb][a-ik-pr-vy]?)([+-0][1-4+-]?(>[+-0][1-4+-]?)?)?([*^](>[*^])?)?')
-charge_dict = {'+': 1, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
-               '-': -1, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
+charge_dict = {'+': 1, '+0': 0, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
+               '-': -1, '-0': 0, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
 dynamic_bonds = {'.>-': (None, 1), '.>=': (None, 2), '.>#': (None, 3), '.>:': (None, 4), '.>~': (None, 8),
                  '->.': (1, None), '->=': (1, 2), '->#': (1, 3), '->:': (1, 4), '->~': (1, 8),
                  '=>.': (2, None), '=>-': (2, 1), '=>#': (2, 3), '=>:': (2, 4), '=>~': (2, 8),
@@ -74,7 +75,7 @@ dyn_charge_dict = {k: (v,) for k, v in dyn_charge_dict.items()}
 dyn_charge_dict.update(tmp)
 dyn_radical_dict = {'*': (True,), '*>^': (True, ('radical', None)), '^>*': (False, ('radical', None))}
 
-_aromatic_upper = {'c': 'C', 'n': 'N', 'o': 'O', 'p': 'P', 's': 'S', 'b': 'B', 'se': 'Se', 'te': 'Te'}
+_aromatic_upper = {'c': 'C', 'n': 'N', 'o': 'O', 'p': 'P', 's': 'S', 'b': 'B', 'as': 'As', 'se': 'Se', 'te': 'Te'}
 
 
 def _is_element_token(token):
@@ -197,6 +198,16 @@ def _tokenize(smiles):
                     token = None
                 token_type = 1
                 tokens.append((1, replace_dict[s]))
+        elif s == '@':  # ring bond
+            if token_type == 11:
+                tokens.append((12, QueryBond(8, False)))  # bare !@ - any non-ring bond
+            elif token_type == 1 or token_type is None and tokens and tokens[-1][0] == 10:
+                tokens.append((12, QueryBond(tokens.pop(-1)[1], True)))  # order glued to the mark: -@
+            else:
+                if token:
+                    tokens.append((token_type, token))
+                tokens.append((12, QueryBond(8, True)))  # bare @ - a ring bond of any order
+            token = token_type = None
         elif token_type in (10, 11):  # expected bond symbol
             raise IncorrectSmarts('query bond invalid')
         elif s in r'\/':
@@ -211,22 +222,29 @@ def _tokenize(smiles):
                 token = None
             token_type = 4
             tokens.append((4, None))
-        elif s == ';':  # ;@ or ;!@ - in ring or not in ring bond
+        elif s in ';&':  # ;@ or ;!@ - in ring or not in ring bond
             if token_type is not None and token_type != 1:  # start of smiles or bond, list of bonds and not bond.
                 raise IncorrectSmarts('Ring bond token invalid')
             token_type = 12
         elif s == ',':  # query bond separator
-            if token_type != 1:
+            if token_type == 1:
+                token = [tokens.pop(-1)[1]]
+            elif token_type is None and tokens and tokens[-1][0] == 10:
+                token = tokens.pop(-1)[1]  # third and further alternative: -,=,#
+            else:
                 raise IncorrectSmarts('Query bond invalid')
             token_type = 10
-            token = [tokens.pop(-1)[1]]
         elif s == '!':  # query not bond
-            if token_type not in (0, 2, 3, 6, 8):  # closures, brackets or atoms expected
+            if token_type == 1 or token_type is None and tokens and tokens[-1][0] == 10:
+                token_type = 12  # ring mark glued to a bond: -!@
+                token = True
+            elif token_type not in (0, 2, 3, 6, 8):  # closures, brackets or atoms expected
                 raise IncorrectSmarts('Query bond invalid')
-            elif token:
-                tokens.append((token_type, token))
-                token = None
-            token_type = 11
+            else:
+                if token:
+                    tokens.append((token_type, token))
+                    token = None
+                token_type = 11
         # brackets
         elif s == '(':
             if token_type == 2:  # barely opened
@@ -245,7 +263,7 @@ def _tokenize(smiles):
             token_type = 3
             tokens.append((3, None))
         # simple atoms
-        elif s in 'NOPSFI':  # organic atoms
+        elif s in 'NOPSFIA':  # organic atoms and the A any-aliphatic wildcard
             if token:
                 tokens.append((token_type, token))
                 token = None
@@ -342,12 +360,27 @@ def _atom_parse(token):
                    'implicit_hydrogens': hydrogen, 'stereo': stereo}
 
 
-def _extract_recursive(token):
-    """Extract $() and !$() recursive SMARTS from bracket content.
+def _split_unnested(token, separator):
+    """Split token on separator occurrences outside parentheses and brackets."""
+    parts = []
+    current = []
+    depth = 0
+    for char in token:
+        if char in '([':
+            depth += 1
+        elif char in ')]':
+            depth -= 1
+        if char == separator and depth == 0:
+            parts.append(''.join(current))
+            current = []
+        else:
+            current.append(char)
+    parts.append(''.join(current))
+    return parts
 
-    Returns (cleaned_token, [(positive, inner_smarts), ...]).
-    If no recursive found, returns (token, None).
-    """
+
+def _pull_recursive(token, group):
+    """Pull $() and !$() out of one alternative, tagging them with its OR group."""
     recursive = []
     result = []
     i = 0
@@ -357,19 +390,46 @@ def _extract_recursive(token):
             # positive recursive $()
             i += 2  # skip $(
             inner, i = _balanced_extract(token, i, n)
-            recursive.append((True, inner))
+            recursive.append((True, inner, group))
         elif i < n - 2 and token[i] == '!' and token[i + 1] == '$' and token[i + 2] == '(':
             # negated recursive !$()
             i += 3  # skip !$(
             inner, i = _balanced_extract(token, i, n)
-            recursive.append((False, inner))
+            recursive.append((False, inner, group))
         else:
             result.append(token[i])
             i += 1
+    return ''.join(result), recursive
+
+
+def _extract_recursive(token):
+    """Extract $() and !$() recursive SMARTS from bracket content.
+
+    ``;`` is the lowest-precedence AND in SMARTS and ``,`` is OR, so
+    ``[O;$(a),$(b)]`` means "O and (a or b)". Each recursive constraint is
+    tagged with the index of the ``;``-term it came from: constraints sharing a
+    tag are alternatives to be ORed, and different tags are ANDed. Without the
+    tag every constraint was ANDed, so an alternation like the one above could
+    never match.
+
+    Returns (cleaned_token, [(positive, inner_smarts, group), ...]).
+    If no recursive found, returns (token, None).
+    """
+    recursive = []
+    kept = []
+    for group, term in enumerate(_split_unnested(token, ';')):
+        alternatives = []
+        for alternative in _split_unnested(term, ','):
+            leftover, found = _pull_recursive(alternative, group)
+            recursive.extend(found)
+            if leftover:
+                alternatives.append(leftover)
+        if alternatives:
+            kept.append(','.join(alternatives))
     if not recursive:
         return token, None
     # clean trailing/leading separators from result
-    cleaned = ''.join(result)
+    cleaned = ';'.join(kept)
     # remove trailing semicolons and commas left from extraction
     while cleaned and cleaned[-1] in ';,':
         cleaned = cleaned[:-1]
@@ -417,15 +477,125 @@ def _balanced_extract(token, start, n):
     raise IncorrectSmarts('Unbalanced parentheses in recursive SMARTS')
 
 
+_elements = frozenset(elements)
+_two_letter_elements = frozenset(e for e in _elements if len(e) == 2) | {'as', 'se', 'te'}
+_extra_symbols = frozenset(('*', 'A', 'a', 'M', 'c', 'n', 'o', 'p', 's', 'b'))
+# Daylight defaults for a primitive written without a count. Bare <r> means
+# "in a ring of any size", which chython spells <R>.
+_bare_primitives = {'D': 'D1', 'X': 'X1', 'H': 'H1', 'h': 'h1', 'r': 'R'}
+# domain of each counting primitive: a negated one is the complement over it.
+# implicit hydrogens stop at 4 - no atom carries more and the packed matcher has no room.
+_count_domains = {'D': ('neighbors', frozenset(range(15))), 'X': ('total_connectivity', frozenset(range(15))),
+                  'H': ('implicit_hydrogens', frozenset(range(5))), 'h': ('implicit_hydrogens', frozenset(range(5))),
+                  'x': ('ring_connectivity', frozenset(range(15))), 'y': ('heteroatoms', frozenset(range(15))),
+                  'R': ('rings_count', frozenset(range(15))),
+                  'z': ('hybridization', frozenset(range(1, 5))), 'v': ('valence', frozenset(range(9)))}
+
+
+def _expand_bare(primitive):
+    if primitive.startswith('!'):
+        return '!' + _bare_primitives.get(primitive[1:], primitive[1:])
+    return _bare_primitives.get(primitive, primitive)
+
+
+def _lex_primitives(text):
+    """Split one AND-group of a bracket body into primitive strings.
+
+    Juxtaposition and <&> are the same high-precedence AND in Daylight, so
+    [CX3], [C&X3] and [X3] all have to lex to the same primitives.
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        if text[i] == '&':
+            i += 1
+            continue
+        start = i
+        if text[i] == '!':
+            i += 1
+            if i == n:
+                raise IncorrectSmarts(f'dangling ! in [{text}]')
+        c = text[i]
+        if c.isdigit():  # isotope
+            while i < n and text[i].isdigit():
+                i += 1
+        elif c in '+-':  # charge
+            i += 1
+            while i < n and (text[i] == c or text[i].isdigit()):
+                i += 1
+        elif c == '@':  # chirality
+            i += 1
+            if i < n and text[i] in '@?':
+                i += 1
+        elif c in '#:':  # atomic number, atom mapping
+            i += 1
+            while i < n and text[i].isdigit():
+                i += 1
+        elif text[i:i + 2] in _two_letter_elements:  # before D/H/R/X: [Dy] [He] [Rh] [Xe]
+            i += 2
+        elif c in 'DXRHrhxyzva':
+            i += 1
+            while i < n and text[i].isdigit():
+                i += 1
+        elif c in _elements or c in _extra_symbols:
+            i += 1
+        else:
+            raise IncorrectSmarts(f'invalid primitive in [{text}]')
+        out.append(text[start:i])
+    return out
+
+
+def _is_element_term(term):
+    """Whether every alternative of a term is a positive element symbol."""
+    for p in term.split(','):
+        if p in _extra_symbols or p in _elements or p in _two_letter_elements:
+            continue
+        elif p.startswith('#') and p[1:].isdigit():
+            continue
+        elif p.startswith('a') and p[1:].isdigit():  # aromatic with a neighbors count
+            continue
+        return False
+    return True
+
+
+def _split_primitives(token):
+    """Split a bracket body into chython's ';'-separated primitive terms.
+
+    Daylight puts no constraints on primitive order and does not require an
+    element at all, while the semantics below expect the element term first, so
+    it is hoisted here and defaults to any atom. <,> alternatives of different
+    primitive types have no representation and are rejected.
+    """
+    terms = []
+    for chunk in _split_unnested(token, ';'):
+        groups = [g for g in (_lex_primitives(x) for x in _split_unnested(chunk, ',')) if g]
+        if not groups:
+            continue
+        elif len(groups) == 1:
+            terms.extend(groups[0])
+        elif all(len(g) == 1 for g in groups):
+            terms.append(','.join(g[0] for g in groups))
+        else:
+            raise IncorrectSmarts(f'Unsupported OR statement: {chunk}')
+    terms = [t for t in terms if t[0] not in '@:']  # stereo and mapping are parsed separately
+    element = None
+    for i, t in enumerate(terms):
+        # a bare H opening the bracket is the hydrogen atom, further in it is a count: [CH], [nH]
+        if _is_element_term(t) and (not i or t != 'H'):
+            element = terms.pop(i)
+            break
+    terms = [','.join(_expand_bare(x) for x in t.split(',')) for t in terms]
+    # a bracket with no element is any atom, so '*' — not 'A', which is any *aliphatic* atom
+    return [element or '*'] + terms
+
+
 def _query_parse(token):
     out = {}
     # Extract recursive SMARTS $() and !$() BEFORE any regex processing
     token, recursive = _extract_recursive(token)
     if recursive:
         out['recursive_smarts'] = recursive
-    if not token:
-        # Pure recursive like [$(NC=O)] — default element to any atom
-        token = 'A'
     if isotope := match(iso_re, token):
         token = token[isotope.end():]  # remove isotope substring
         out['isotope'] = int(isotope.group())
@@ -454,23 +624,16 @@ def _query_parse(token):
         token = token[:stereo.start()] + token[stereo.end():]
         out['stereo'] = stereo.group() == '@'
 
-    # supported only <;> and <,> logic. <&> and silent <&> not supported!
-    primitives = token.split(';')
-    if element := primitives[0]:
-        element = [int(x[1:]) if x.startswith('#') else x for x in element.split(',') if x]
-        if not element:
-            element = 'A'  # all comma-separated sub-elements were recursive $() — default to any
-        elif len(element) == 1:
-            element = element[0]
-    elif recursive:
-        element = 'A'  # pure recursive like [$(NC=O)] — default to any
-    else:
-        raise IncorrectSmarts('Empty element')
+    primitives = _split_primitives(token)
+    element = [int(x[1:]) if x.startswith('#') else x for x in primitives[0].split(',')]
+    if len(element) == 1:
+        element = element[0]
 
     # Handle lowercase aromatic element symbols (c, n, o, p, s, b, se, te)
     # Also handle * (any atom) and a (any aromatic atom)
     # Handle negated elements: !#6, !C, etc.
     aromatic_from_symbol = False
+    aliphatic_from_symbol = False
     if isinstance(element, str):
         if element.startswith('!'):
             # Negated element: !#6 = not carbon, !N = not nitrogen
@@ -485,6 +648,8 @@ def _query_parse(token):
             element = 'A'
         elif element == '*':
             element = 'A'
+        elif element == 'A':  # Daylight: A is any aliphatic atom, * is any atom
+            aliphatic_from_symbol = True
         elif element == 'a':
             element = 'A'
             aromatic_from_symbol = True
@@ -532,8 +697,8 @@ def _query_parse(token):
             continue
         elif p == 'a':  # aromatic atom
             out['hybridization'] = 4
-        elif p == 'A':  # ignore aliphatic mark. Ad-Hoc for Marwin.
-            continue
+        elif p == 'A':  # aliphatic mark
+            out['hybridization'] = [1, 2, 3]
         elif p == '!a':  # not aromatic = aliphatic
             out['hybridization'] = [1, 2, 3]
         elif p == '!R':
@@ -546,31 +711,35 @@ def _query_parse(token):
             p = [x for x in p.split(',') if x]
             if not p:
                 continue
-            t = p[0][0]
-            if t in ('D', 'h', 'r', 'x', 'z', 'X', 'R', 'H'):
-                # Standard SMARTS primitives
-                # z and x private chython marks for hybridization and heteroatoms count
-                if len(p) != 1 and len({x[0] for x in p}) > 1:
+            negated = p[0][0] == '!'
+            t = p[0][1] if negated else p[0][0]
+            if t in _count_domains or t == 'r':
+                # y and z are chython marks for heteroatom count and hybridization; x is Daylight's ring bonds
+                if len({x.lstrip('!')[0] for x in p}) > 1 or any((x[0] == '!') != negated for x in p):
                     raise IncorrectSmarts('Unsupported OR statement')
                 try:
-                    p = [int(x[1:]) for x in p]
+                    values = [int(x[2:] if negated else x[1:]) for x in p]
                 except ValueError:
                     raise IncorrectSmarts(f'Invalid primitive value')
 
-                if t == 'D':
-                    out['neighbors'] = p
-                elif t == 'h' or t == 'H':
-                    out['implicit_hydrogens'] = p
-                elif t == 'r':
-                    out['ring_sizes'] = p
-                elif t == 'x':
-                    out['heteroatoms'] = p
-                elif t == 'X':
-                    out['total_connectivity'] = p
-                elif t == 'R':
-                    out['rings_count'] = p
-                else:  # z
-                    out['hybridization'] = p
+                if t == 'r':
+                    if not negated:  # r0 is the not-in-ring mark, which ring_sizes spells as a bare zero
+                        out['ring_sizes'] = 0 if values == [0] else values
+                        continue
+                    elif values != [0]:  # a per-size negation has no place on the atom
+                        raise IncorrectSmarts(f'Unsupported SMARTS primitive: !r{values[0]}')
+                    key, allowed = 'rings_count', set(range(1, 15))  # !r0 - member of any ring
+                else:
+                    key, domain = _count_domains[t]
+                    allowed = set()
+                    for v in values:
+                        allowed |= domain - {v} if negated else {v}
+                if key in out:  # primitives of the same kind are ANDed: [C!H0!H1]
+                    known = out[key]
+                    allowed &= {known} if isinstance(known, int) else set(known)
+                    if not allowed:
+                        raise IncorrectSmarts(f'contradictory {key} constraints')
+                out[key] = sorted(allowed)
             elif all(_is_element_token(x) for x in p):
                 # Element constraint in primitive position (e.g., [*;O,S,P,N] or [*;!#6])
                 extra_elements = []
@@ -613,6 +782,8 @@ def _query_parse(token):
     # Infer aromatic hybridization from lowercase symbol if not explicitly set
     if aromatic_from_symbol and 'hybridization' not in out:
         out['hybridization'] = 4
+    elif aliphatic_from_symbol and 'hybridization' not in out:
+        out['hybridization'] = [1, 2, 3]
     elif not aromatic_from_symbol and 'hybridization' not in out:
         # Standard SMARTS: uppercase aromaticity-capable symbol = aliphatic.
         # Marker is relaxed by the parser if the atom has an aromatic bond.

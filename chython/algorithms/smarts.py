@@ -196,9 +196,10 @@ class Smarts(Smiles):
     def _format_bond(self: 'QueryContainer', n, m, adjacency, **kwargs):
         bond = self._bonds[n][m]
         orders = bond.order
-        if len(orders) == 1:
-            return order_str[orders[0]]
-        return ','.join(order_str[o] for o in orders)
+        smi = order_str[orders[0]] if len(orders) == 1 else ','.join(order_str[o] for o in orders)
+        if bond.in_ring is None:
+            return smi
+        return smi + (';@' if bond.in_ring else ';!@')
 
     def _format_cxsmiles(self: 'QueryContainer', order):
         atoms = self._atoms

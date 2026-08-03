@@ -26,17 +26,17 @@ template = {
         {
             'A': [
                 # O=CR2
-                '[O;x0;z2:2]=[C;x1:1]'
+                '[O;y0;z2:2]=[C;y1:1]'
             ],
             'B': [
                 # Ar-NH2
-                '[N;D1;x0;z1:3][C;a;M]',
+                '[N;D1;y0;z1:3][C;a;M]',
                 # Alk-NH2
-                '[N;D1;x0;z1:3][C;z1;x1;M]',
+                '[N;D1;y0;z1:3][C;z1;y1;M]',
                 # Alk-NH-Ar
-                '[N;D2;x0;z1:3]([C;a;M])[C;z1;x1;M]',
+                '[N;D2;y0;z1:3]([C;a;M])[C;z1;y1;M]',
                 # Alk2NH
-                '[N;D2;x0;z1:3]([C;z1;x1;M])[C;z1;x1;M]'
+                '[N;D2;y0;z1:3]([C;z1;y1;M])[C;z1;y1;M]'
             ],
             'product': '[A:1]-[A:3]',
             'alerts': [],

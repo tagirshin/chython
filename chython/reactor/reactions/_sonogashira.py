@@ -27,15 +27,15 @@ template = {
         {
             'A': [
                 # HC#C-R
-                '[C;D1;x0;z3:1]#[C;D2;x0;M]'
+                '[C;D1;y0;z3:1]#[C;D2;y0;M]'
             ],
             'B': [
                 # Ar-Hal
                 '[Cl,Br,I;D1:3]-[C;a:2]',
                 # C=C-Hal
-                '[Cl,Br,I;D1:3]-[C;x1;z2:2]=[C;x0;z2;M]',
+                '[Cl,Br,I;D1:3]-[C;y1;z2:2]=[C;y0;z2;M]',
                 # R-C(=O)-Hal
-                '[Cl,Br,I;D1:3]-[C;x2;z2:2]=[O;M]'
+                '[Cl,Br,I;D1:3]-[C;y2;z2:2]=[O;M]'
             ],
             'product': '[A:1]-[A:2]',
             'alerts': [],

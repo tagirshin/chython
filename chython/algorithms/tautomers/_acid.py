@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _stripped_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 
@@ -31,23 +31,23 @@ def _stripped_rules():
 
 
 def _rules():
-    from ... import smarts
+    from ...files.daylight.smarts import smarts
 
     rules = _stripped_rules()
 
     # Phenoles
-    q = smarts('[O,S,Se;D1;z1][C,N;a]')
+    q = smarts('[O,S,Se;D1;z1;+0][C,N;a;+0]')
     rules.append(q)
 
     # Oxo-acids
-    q = smarts('[O,S,Se;D1;z1][C,N,P,S,Se,Cl,Br,I]=O')
+    q = smarts('[O,S,Se;D1;z1;+0][C,N,P,S,Se,Cl,Br,I;+0]=[O;+0]')
     rules.append(q)
 
     # Nitro acid
-    q = smarts('[N;D3;z2;+]([O;D1:1])([O-])=O')
+    q = smarts('[N;D3;z2;+]([O;D1;+0:1])([O-])=[O;+0]')
     rules.append(q)
 
-    q = smarts('[F,Cl,Br,I;D0]')
+    q = smarts('[F,Cl,Br,I;D0;+0]')
     rules.append(q)
     return rules
 

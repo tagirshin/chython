@@ -26,19 +26,19 @@ template = {
         {
             'A': [
                 # RS(=O)(=O)X
-                '[S;D4;x3;z3:1]([O,F,Cl,Br,I;D1:2])(=[O;M])(=[O;M])[C;M]'
+                '[S;D4;y3;z3:1]([O,F,Cl,Br,I;D1:2])(=[O;M])(=[O;M])[C;M]'
             ],
             'B': [
                 # Ar-NH2
-                '[N;D1;x0;z1:3][C;a;M]',
+                '[N;D1;y0;z1:3][C;a;M]',
                 # Alk-NH2
-                '[N;D1;x0;z1:3][C;z1;x1;M]',
+                '[N;D1;y0;z1:3][C;z1;y1;M]',
                 # Ar-NH-Ar
-                '[N;D2;x0;z1:3]([C;a;M])[C;a;M]',
+                '[N;D2;y0;z1:3]([C;a;M])[C;a;M]',
                 # Alk-NH-Ar
-                '[N;D2;x0;z1:3]([C;a;M])[C;z1;x1;M]',
+                '[N;D2;y0;z1:3]([C;a;M])[C;z1;y1;M]',
                 # Alk2NH
-                '[N;D2;x0;z1:3]([C;z1;x1;M])[C;z1;x1;M]'
+                '[N;D2;y0;z1:3]([C;z1;y1;M])[C;z1;y1;M]'
             ],
             'product': '[A:1]-[A:3]',
             'alerts': [],

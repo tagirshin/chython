@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from chython import Reactor, ReactionContainer, smarts
+from chython import Reactor, ReactionContainer
+from chython.files.daylight.smarts import smarts
 from collections.abc import Iterator
 from ._amidation import template as amidation_template
 from ._aryl_amination import template as aryl_amination_template

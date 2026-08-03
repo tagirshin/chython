@@ -29,7 +29,7 @@ template = {
             ],
             'B': [
                 # CO
-                '[O;D1;x0;z1:3]-[C;x1;z1:4]'
+                '[O;D1;y0;z1:3]-[C;y1;z1:4]'
             ],
             'product': '[A:2]-[A:4]',
             'alerts': [],

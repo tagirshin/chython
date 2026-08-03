@@ -20,28 +20,28 @@ from lazy_object_proxy import Proxy
 
 
 def _sugar_group():
-    from ... import smarts
+    from ...files.daylight.smarts import smarts
 
-    return smarts('[N,O;D1,D2:1][C;z1][C;z2]=[N,O:2]')
+    return smarts('[N,O;D1,D2;+0:1][C;z1;+0][C;z2;+0]=[N,O;+0:2]')
 
 
 def _keto_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
     # first atom is H-acceptor
     # second is direction
 
     # C-C=[O,S,NH]
-    q = smarts('[N,O,S;D1;z2]=[C;D2,D3;x1;z2]')
+    q = smarts('[N,O,S;D1;z2]=[C;D2,D3;y1;z2]')
     rules.append(q)
 
     # C-C=N-[C,N,O]
-    q = smarts('[N;D2;z2](=[C;D2,D3;x1;z2])[C,N,O]')
+    q = smarts('[N;D2;z2](=[C;D2,D3;y1;z2])[C,N,O]')
     rules.append(q)
 
     # [C,H]-N=N-C
-    q = smarts('[N;D1,D2;x1;z2]=N[C;x1]')
+    q = smarts('[N;D1,D2;y1;z2;+0]=[N;+0][C;y1;+0]')
     rules.append(q)
 
     # [S,O,NR;H]-C=N
@@ -57,28 +57,28 @@ def _keto_rules():
     rules.append(q)
 
     # O=C-[N,S;H]
-    q = smarts('[O;D1;z2]=C[N,S;h1,h2]')
+    q = smarts('[O;D1;z2;+0]=[C;+0][N,S;h1,h2;+0]')
     rules.append(q)
     return rules
 
 
 def _enol_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
     # first atom is H-donor
     # second is direction
 
     # C=C-[OH,SH,NH2]
-    q = smarts('[N,O,S;D1;z1][C;D2,D3;x1;z2]')
+    q = smarts('[N,O,S;D1;z1][C;D2,D3;y1;z2]')
     rules.append(q)
 
     # C=C-[NH]-[C,N,O]
-    q = smarts('[N;D2;z1]([C;D2,D3;x1;z2])[C,N,O]')
+    q = smarts('[N;D2;z1]([C;D2,D3;y1;z2])[C,N,O]')
     rules.append(q)
 
     # [C,H]-[NH]-N=C
-    q = smarts('[N;D1,D2;x1;z1][N;z2]=[C;x1]')
+    q = smarts('[N;D1,D2;y1;z1;+0][N;z2;+0]=[C;y1;+0]')
     rules.append(q)
 
     # [S,O,NR;H]-C=N
@@ -94,7 +94,7 @@ def _enol_rules():
     rules.append(q)
 
     # O=C-[N,S;H]
-    q = smarts('[N,S;h1,h2;z1][C;z2]=O')
+    q = smarts('[N,S;h1,h2;z1;+0][C;z2;+0]=[O;+0]')
     rules.append(q)
     return rules
 

@@ -23,7 +23,7 @@ template = {
     'templates': [
         {
             # Ph-O-Alk
-            'product': '[O;D2;x0;z1:1](-;!@[C;a;M])[C;z1;x1:2]',
+            'product': '[O;D2;y0;z1:1](-;!@[C;a;M])[C;z1;y1:2]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[O;M]'
@@ -31,7 +31,7 @@ template = {
         },
         {
             # Ac-O-Alk
-            'product': '[O;D2;x0;z1:1](-;!@[C;x2;z2;M]=[O;M])[C;z1;x1:2]',
+            'product': '[O;D2;y0;z1:1](-;!@[C;y2;z2;M]=[O;M])[C;z1;y1:2]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[O;M]'
@@ -39,7 +39,7 @@ template = {
         },
         {
             # Ph-O-Ac
-            'product': '[O;D2;x0;z1:1](-;!@[C;D3;x2;z2:2]=[O;M])[C;a;M]',
+            'product': '[O;D2;y0;z1:1](-;!@[C;D3;y2;z2:2]=[O;M])[C;a;M]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[O;M]'

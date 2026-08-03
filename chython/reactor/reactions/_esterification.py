@@ -27,16 +27,16 @@ template = {
         {
             'A': [
                 # C(=O)O
-                '[O;D1;x0;z1:2]-[C;x2;z2:1]=[O;M]',
+                '[O;D1;y0;z1:2]-[C;y2;z2:1]=[O;M]',
             ],
             'B': [
                 # CO
-                '[O;D1;x0;z1:3]-[C;x1;z1;M]'
+                '[O;D1;y0;z1:3]-[C;y1;z1;M]'
             ],
             'product': '[A:1]-[A:3]',
             # condition-specific untolerant groups
             'alerts': [
-                '[S;D1;x0;z1][C;x1;z1]',  # thiol
+                '[S;D1;y0;z1][C;y1;z1]',  # thiol
                 '[O,S;D1;z1][A;a]'  # [thia]phenol
             ],
             'ufe': {

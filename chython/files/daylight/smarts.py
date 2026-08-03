@@ -74,10 +74,10 @@ def _parse_mol_smarts(data: str) -> QueryContainer:
             g.atom(n)._excluded_elements = excluded_elements
         if recursive_smarts_raw:
             compiled = []
-            for positive, inner_str in recursive_smarts_raw:
+            for positive, inner_str, group in recursive_smarts_raw:
                 sub_query = smarts(inner_str)
                 root = next(iter(sub_query))
-                compiled.append((positive, sub_query, root))
+                compiled.append((positive, sub_query, root, group))
             g.atom(n)._recursive_smarts = compiled
 
     for n, m, b in parsed['bonds']:
@@ -112,15 +112,23 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
 
     Reaction SMARTS format: ``reactants>reagents>products`` or ``reactants>>products``
 
-    * only D, a, h, r and !R atom primitives supported.
-    * bond order list (max 2) and not bond supported.
-    * [not]ring bond supported only in combination with explicit bonds, not bonds and bonds orders lists.
+    * only D, X, R, a, h, r, H, v atom primitives supported.
+    * a negated primitive is the complement over its domain: [!H0] is [H1,H2,H3,H4]. Negated ring
+      sizes are the exception - [!r5] has no place on the atom and is rejected.
+    * valence is derived from the neighbors and the hybridization, so it is unconstrained on
+      aromatic atoms, which have no kekule structure here.
+    * bond order list and not bond supported.
+    * [not]ring bond supported standalone (@, !@) and combined with orders (-@, -!@, -,=;!@).
     * mapping, charge and isotopes supported.
+    * an unmarked charge is unconstrained: [N] matches [NH4+], [N+0] does not. An unmarked radical
+      state means non-radical, since a radical can only be asserted through the CXSMARTS |^1:n|
+      block and there is no syntax to deny one.
     * list of elements supported.
-    * A - treats as any element. <A> primitive (aliphatic) ignored.
+    * A - any aliphatic atom, * - any atom, a - any aromatic atom.
+    * rN is any ring of size N, unlike RDKit, which reads it as the smallest ring of size N.
     * M - treats as any metal
-    * <&> logic operator unsupported.
-    * <;> logic operator is mandatory except (however preferable) for charge, isotope, stereo marks.
+    * <&>, <;> and juxtaposition are all AND. An element is not required: [r5] is any ring atom.
+    * <,> alternatives of different primitive types unsupported: [C,N] and [r5,r6] parse, [C,r5] does not.
     * CXSMARTS radicals supported.
     * masked atom - `chython.Reactor` specific mark for masking reactant atoms from deletion.
 
@@ -129,7 +137,8 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
         [C;r5,r6;a]-;!@[C;h1,h2;z2,z4] |^1:1| - aromatic C member of 5 or 6 atoms ring
         connected with non-ring single bond to aromatic or SP2 radical C with 1 or 2 hydrogens.
 
-    * primitive <xN> - heteroatoms (e.g. x2 - two heteroatoms)
+    * primitive <xN> - ring bonds, Daylight's ring connectivity (e.g. x2 - two ring bonds)
+    * primitive <yN> - heteroatoms, a chython extension (e.g. y2 - two heteroatom neighbors)
     * primitive <zN> - hybridization (N = 1 - sp3, 2 - sp2, 3 - sp, 4 - aromatic)
     * primitive <M> - masked atom
 

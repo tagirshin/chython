@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from .. import smarts, MoleculeContainer
+from .. import MoleculeContainer
+from ..files.daylight.smarts import smarts
 from .transformer import Transformer
 
 """
@@ -24,50 +25,50 @@ Predefined transformers for common reactive groups cleavage.
 """
 
 _alcohol = (
-    ('[O;D1;z1;x0][C;z1;x1:1]', '[A:1]',  # rule
+    ('[O;D1;z1;y0][C;z1;y1:1]', '[A:1]',  # rule
      'CCO', 'CC',  # match test
      'c1ccccc1O'),  # false-match test
 )
 
 _phenol = (
-    ('[O;D1;z1;x0][C;a:1]', '[A:1]', 'c1ccccc1O', 'c1ccccc1', 'CCO'),
+    ('[O;D1;z1;y0][C;a:1]', '[A:1]', 'c1ccccc1O', 'c1ccccc1', 'CCO'),
 )
 
 _chloro_aryl = (
-    ('[Cl;D1;z1;x0][C;a:1]', '[A:1]', 'c1ccccc1Cl', 'c1ccccc1', 'c1ccccc1Br', 'CCCl'),
+    ('[Cl;D1;z1;y0][C;a:1]', '[A:1]', 'c1ccccc1Cl', 'c1ccccc1', 'c1ccccc1Br', 'CCCl'),
 )
 
 _bromo_aryl = (
-    ('[Br;D1;z1;x0][C;a:1]', '[A:1]', 'c1ccccc1Br', 'c1ccccc1', 'c1ccccc1I', 'CCBr'),
+    ('[Br;D1;z1;y0][C;a:1]', '[A:1]', 'c1ccccc1Br', 'c1ccccc1', 'c1ccccc1I', 'CCBr'),
 )
 
 _iodo_aryl = (
-    ('[I;D1;z1;x0][C;a:1]', '[A:1]', 'c1ccccc1I', 'c1ccccc1', 'c1ccccc1Cl', 'CCI'),
+    ('[I;D1;z1;y0][C;a:1]', '[A:1]', 'c1ccccc1I', 'c1ccccc1', 'c1ccccc1Cl', 'CCI'),
 )
 
 _chloro_alkyl = (
-    ('[Cl;D1;z1;x0][C;x1;z1:1]', '[A:1]', 'CCCl', 'CC', 'c1ccccc1Cl'),
+    ('[Cl;D1;z1;y0][C;y1;z1:1]', '[A:1]', 'CCCl', 'CC', 'c1ccccc1Cl'),
 )
 
 _bromo_alkyl = (
-    ('[Br;D1;z1;x0][C;x1;z1:1]', '[A:1]', 'CCBr', 'CC', 'c1ccccc1Br'),
+    ('[Br;D1;z1;y0][C;y1;z1:1]', '[A:1]', 'CCBr', 'CC', 'c1ccccc1Br'),
 )
 
 _iodo_alkyl = (
-    ('[I;D1;z1;x0][C;x1;z1:1]', '[A:1]', 'CCI', 'CC', 'c1ccccc1I'),
+    ('[I;D1;z1;y0][C;y1;z1:1]', '[A:1]', 'CCI', 'CC', 'c1ccccc1I'),
 )
 
 _carboxy = (
-    ('[O;D1;z1;x0][C;D3;!R;x2;z2](=[O;D1])[C:1]', '[A:1]', 'CCC(=O)O', 'CC'),
+    ('[O;D1;z1;y0][C;D3;!R;y2;z2](=[O;D1])[C:1]', '[A:1]', 'CCC(=O)O', 'CC'),
 )
 
 _chloro_anhydride = (
-    ('[Cl;D1;z1;x0][C;D3;!R;x2;z2](=[O;D1])[C:1]', '[A:1]', 'CCC(=O)Cl', 'CC'),
+    ('[Cl;D1;z1;y0][C;D3;!R;y2;z2](=[O;D1])[C:1]', '[A:1]', 'CCC(=O)Cl', 'CC'),
 )
 
 _amine_primary = (
-    ('[N;D1;z1;x0][C;x1;z1:1]', '[A:1]', 'CCN', 'CC', 'CNC'),
-    ('[N;D1;z1;x0][C;a:1]', '[A:1]', 'c1ccccc1N', 'c1ccccc1', 'c1ccccc1NC'),
+    ('[N;D1;z1;y0][C;y1;z1:1]', '[A:1]', 'CCN', 'CC', 'CNC'),
+    ('[N;D1;z1;y0][C;a:1]', '[A:1]', 'c1ccccc1N', 'c1ccccc1', 'c1ccccc1NC'),
 )
 
 #################

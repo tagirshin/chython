@@ -656,3 +656,75 @@ def test_molecule_smarts_regression():
 
     q = smarts('[C;D2:1]-[Br;D1:2]')
     assert isinstance(q, QueryContainer)
+
+
+@pytest.mark.parametrize('pattern,target,n', [
+    # an unmarked atom takes any charge
+    ('[N]', '[NH4+]', 1),
+    ('[#7]', 'CC[N+](=O)[O-]', 1),
+    ('[O]', '[O-]C(=O)C', 2),
+    ('[N;R0]', 'CC[N+](=O)[O-]', 1),
+    ('[O;$([O-])]', 'CC[N+](=O)[O-]', 1),
+    # an explicit charge still constrains, +0 included
+    ('[N+]', 'C[NH3+]', 1),
+    ('[N+]', 'CN', 0),
+    ('[N+0]', 'C[NH3+]', 0),
+    ('[N+0]', 'CN', 1),
+    ('[O-]', '[O-]C(=O)C', 1),
+    # an unmarked radical state means non-radical: only the methyl of the ethyl radical matches
+    ('[C;D1]', 'C[CH2]', 1),
+    ('[C;D1;H2]', 'C[CH2]', 0),
+])
+def test_unspecified_charge_matches_any(pattern, target, n):
+    assert len(list(smarts(pattern).get_mapping(smiles(target)))) == n
+
+
+def test_cx_radical_mark_still_constrains():
+    q = smarts('[C;D1] |^1:0|')
+    assert len(list(q.get_mapping(smiles('C[CH2]')))) == 1
+    assert len(list(q.get_mapping(smiles('CC')))) == 0
+
+
+def test_standardize_reaches_fixed_point():
+    # the charge-writing rules carry an explicit +0 so they stop matching once they have fired;
+    # without it standardization never settles
+    for s in ('[O-]B(O)(O)O', 'C[N+](C)(C)C', 'CC#N=O', 'NN#C', 'CC(=O)[O-]', '[NH3+]CC(=O)[O-]'):
+        m = smiles(s)
+        m.canonicalize()
+        once = str(m)
+        m.canonicalize()
+        assert str(m) == once, f'{s} does not settle: {once} -> {m}'
+
+
+@pytest.mark.parametrize('pattern,target,n', [
+    # x is Daylight ring connectivity: how many of the atom's bonds are ring bonds
+    ('[*;x0]', 'CC(=O)O', 4),
+    ('[*;x2]', 'c1ccccc1', 6),
+    ('[*;x0]', 'c1ccccc1', 0),
+    ('[*;x3]', 'c1ccc2ccccc2c1', 2),   # the two naphthalene fusion carbons
+    ('[*;x2]', 'Cc1ccccc1', 6),        # the methyl is not in a ring
+    # y is chython's heteroatom-neighbour count, which x used to mean
+    ('[C;y2]', 'CC(=O)O', 1),
+    ('[C;y0]', 'CC(=O)O', 1),
+    # r is any ring of that size, unlike RDKit's smallest-ring reading
+    ('[r6]', 'c1ccc2c(c1)CCC2', 6),
+])
+def test_ring_connectivity_and_heteroatoms(pattern, target, n):
+    assert len(list(smarts(pattern).get_mapping(smiles(target),
+                                                automorphism_filter=False))) == n
+
+
+def test_unknown_primitive_raises():
+    from chython.exceptions import IncorrectSmarts
+
+    with pytest.raises(IncorrectSmarts):
+        smarts('[C;Q]')
+    with pytest.raises(IncorrectSmarts):
+        smarts('[CQ]')
+
+
+def test_unmarked_product_atom_is_neutral():
+    # matching is relaxed, patching is not: an unmarked product atom still writes charge 0
+    rxn = smarts('[N+;D4:1]>>[N:1]')
+    products = [str(r).split('>>')[1] for r in rxn.to_reactor()(smiles('C[N+](C)(C)C'))]
+    assert products == ['CN(C)(C)C']

@@ -514,7 +514,7 @@ class TestReactor:
     def test_stereo_preserving_reactor(self):
         """Reactor preserves stereochemistry (existing reactor test pattern)."""
         patterns = [
-            smarts("[B;D3;x2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)"),
+            smarts("[B;D3;y2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)"),
             smarts("[Cl,Br,I;D1:1]-[C;a:2]"),
         ]
         products = [smarts("[A;@:3]-[A:2]")]

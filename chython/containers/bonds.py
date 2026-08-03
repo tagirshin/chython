@@ -180,11 +180,14 @@ class QueryBond:
             if self.in_ring is not None:
                 if self.in_ring != other.in_ring:
                     return False
-            return other.order in self.order
+            # order 8 is the SMARTS <~> any-bond mark. Real bonds are 1-4, so
+            # comparing membership would never hold and <~> would match nothing,
+            # which silently makes any enclosing !$() vacuously true.
+            return 8 in self.order or other.order in self.order
         elif isinstance(other, QueryBond):
             return self.order == other.order and self.in_ring == other.in_ring
         elif isinstance(other, int):
-            return other in self.order
+            return 8 in self.order or other in self.order
         return False
 
     def __repr__(self):

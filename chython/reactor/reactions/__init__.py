@@ -31,7 +31,8 @@ from ._sonogashira import template as songashira_template
 from ._sulfonamidation import template as sulfonamidation_template
 from ._suzuki_miyaura import template as suzuki_miyaura_template
 from ..reactor import Reactor, fix_mapping_overlap
-from ... import smarts, ReactionContainer, MoleculeContainer
+from ... import ReactionContainer, MoleculeContainer
+from ...files.daylight.smarts import smarts
 
 """
 Predefined reactors for common reactions.
