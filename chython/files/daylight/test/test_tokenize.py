@@ -82,6 +82,15 @@ def test_smarts_tokenize_bonds():
                                               (0, _aliph_C)]
     assert smarts_tokenize('[C]-,=;!@[C]') == [(0, _aliph_C), (12, QueryBond((1, 2), False)),
                                                (0, _aliph_C)]
+    # ring marks without an explicit order, and orders glued to the mark
+    assert smarts_tokenize('[C]@[C]') == [(0, _aliph_C), (12, QueryBond(8, True)), (0, _aliph_C)]
+    assert smarts_tokenize('[C]!@[C]') == [(0, _aliph_C), (12, QueryBond(8, False)), (0, _aliph_C)]
+    assert smarts_tokenize('[C]-!@[C]') == [(0, _aliph_C), (12, QueryBond(1, False)), (0, _aliph_C)]
+    assert smarts_tokenize('[C]-&!@[C]') == [(0, _aliph_C), (12, QueryBond(1, False)), (0, _aliph_C)]
+    assert smarts_tokenize('[C]-@[C]') == [(0, _aliph_C), (12, QueryBond(1, True)), (0, _aliph_C)]
+    # more than two alternatives
+    assert smarts_tokenize('[C]-,=,#[C]') == [(0, _aliph_C), (10, [1, 2, 3]), (0, _aliph_C)]
+    assert smarts_tokenize('[C]-,=,#;!@[C]') == [(0, _aliph_C), (12, QueryBond((1, 2, 3), False)), (0, _aliph_C)]
 
 
 _aliph = {'hybridization': [1, 2, 3], '_default_aliphatic': True}
@@ -115,7 +124,32 @@ def test_smarts_bracket_primitives(pattern, expected):
     assert smarts_tokenize(pattern) == [(8 if expected.get('hybridization') == 4 else 0, expected)]
 
 
+@mark.parametrize('pattern,expected', [
+    # a negated count primitive is the complement over its domain
+    ('[!H0]', {'element': 'A', 'implicit_hydrogens': [1, 2, 3, 4]}),
+    ('[C!D1]', {'element': 'C', 'neighbors': [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], **_aliph}),
+    ('[!z1]', {'element': 'A', 'hybridization': [2, 3, 4]}),
+    # primitives of the same kind are ANDed, not overwritten
+    ('[C;!H0;!H1]', {'element': 'C', 'implicit_hydrogens': [2, 3, 4], **_aliph}),
+    # ring membership: r0 and !R mean no ring, !r0 and R mean any ring
+    ('[r0]', {'element': 'A', 'ring_sizes': 0}),
+    ('[!r]', {'element': 'A', 'ring_sizes': 0}),
+    ('[!r0]', {'element': 'A', 'rings_count': list(range(1, 15))}),
+    ('[!R0]', {'element': 'A', 'rings_count': list(range(1, 15))}),
+    # valence
+    ('[Nv3]', {'element': 'N', 'valence': [3], **_aliph}),
+    ('[!v4]', {'element': 'A', 'valence': [0, 1, 2, 3, 5, 6, 7, 8]}),
+])
+def test_smarts_negated_primitives(pattern, expected):
+    assert smarts_tokenize(pattern) == [(0, expected)]
+
+
 def test_smarts_or_across_primitives():
     # needs an expression tree chython's atom attributes cannot express
     with raises(IncorrectSmarts):
         smarts_tokenize('[C,X3]')
+
+
+def test_smarts_contradictory_primitives():
+    with raises(IncorrectSmarts):
+        smarts_tokenize('[C;H1;H2]')

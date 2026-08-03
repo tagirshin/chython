@@ -324,7 +324,8 @@ class QueryIsomorphism(Isomorphism):
     def _has_extended_query(self):
         if any(
             getattr(a, '_total_connectivity', ()) or getattr(a, '_rings_count', ())
-            or getattr(a, '_recursive_smarts', None) or getattr(a, '_excluded_elements', None)
+            or getattr(a, '_valence', ()) or getattr(a, '_recursive_smarts', None)
+            or getattr(a, '_excluded_elements', None)
             for _, a in self.atoms()
         ):
             return True

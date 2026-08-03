@@ -112,9 +112,13 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
 
     Reaction SMARTS format: ``reactants>reagents>products`` or ``reactants>>products``
 
-    * only D, X, R, a, h, r, H and !R atom primitives supported.
-    * bond order list (max 2) and not bond supported.
-    * [not]ring bond supported only in combination with explicit bonds, not bonds and bonds orders lists.
+    * only D, X, R, a, h, r, H, v atom primitives supported.
+    * a negated primitive is the complement over its domain: [!H0] is [H1,H2,H3,H4]. Negated ring
+      sizes are the exception - [!r5] has no place on the atom and is rejected.
+    * valence is derived from the neighbors and the hybridization, so it is unconstrained on
+      aromatic atoms, which have no kekule structure here.
+    * bond order list and not bond supported.
+    * [not]ring bond supported standalone (@, !@) and combined with orders (-@, -!@, -,=;!@).
     * mapping, charge and isotopes supported.
     * list of elements supported.
     * A - treats as any element. <A> primitive (aliphatic) ignored.

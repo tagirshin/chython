@@ -75,7 +75,7 @@ dyn_charge_dict = {k: (v,) for k, v in dyn_charge_dict.items()}
 dyn_charge_dict.update(tmp)
 dyn_radical_dict = {'*': (True,), '*>^': (True, ('radical', None)), '^>*': (False, ('radical', None))}
 
-_aromatic_upper = {'c': 'C', 'n': 'N', 'o': 'O', 'p': 'P', 's': 'S', 'b': 'B', 'se': 'Se', 'te': 'Te'}
+_aromatic_upper = {'c': 'C', 'n': 'N', 'o': 'O', 'p': 'P', 's': 'S', 'b': 'B', 'as': 'As', 'se': 'Se', 'te': 'Te'}
 
 
 def _is_element_token(token):
@@ -198,6 +198,16 @@ def _tokenize(smiles):
                     token = None
                 token_type = 1
                 tokens.append((1, replace_dict[s]))
+        elif s == '@':  # ring bond
+            if token_type == 11:
+                tokens.append((12, QueryBond(8, False)))  # bare !@ - any non-ring bond
+            elif token_type == 1 or token_type is None and tokens and tokens[-1][0] == 10:
+                tokens.append((12, QueryBond(tokens.pop(-1)[1], True)))  # order glued to the mark: -@
+            else:
+                if token:
+                    tokens.append((token_type, token))
+                tokens.append((12, QueryBond(8, True)))  # bare @ - a ring bond of any order
+            token = token_type = None
         elif token_type in (10, 11):  # expected bond symbol
             raise IncorrectSmarts('query bond invalid')
         elif s in r'\/':
@@ -212,22 +222,29 @@ def _tokenize(smiles):
                 token = None
             token_type = 4
             tokens.append((4, None))
-        elif s == ';':  # ;@ or ;!@ - in ring or not in ring bond
+        elif s in ';&':  # ;@ or ;!@ - in ring or not in ring bond
             if token_type is not None and token_type != 1:  # start of smiles or bond, list of bonds and not bond.
                 raise IncorrectSmarts('Ring bond token invalid')
             token_type = 12
         elif s == ',':  # query bond separator
-            if token_type != 1:
+            if token_type == 1:
+                token = [tokens.pop(-1)[1]]
+            elif token_type is None and tokens and tokens[-1][0] == 10:
+                token = tokens.pop(-1)[1]  # third and further alternative: -,=,#
+            else:
                 raise IncorrectSmarts('Query bond invalid')
             token_type = 10
-            token = [tokens.pop(-1)[1]]
         elif s == '!':  # query not bond
-            if token_type not in (0, 2, 3, 6, 8):  # closures, brackets or atoms expected
+            if token_type == 1 or token_type is None and tokens and tokens[-1][0] == 10:
+                token_type = 12  # ring mark glued to a bond: -!@
+                token = True
+            elif token_type not in (0, 2, 3, 6, 8):  # closures, brackets or atoms expected
                 raise IncorrectSmarts('Query bond invalid')
-            elif token:
-                tokens.append((token_type, token))
-                token = None
-            token_type = 11
+            else:
+                if token:
+                    tokens.append((token_type, token))
+                    token = None
+                token_type = 11
         # brackets
         elif s == '(':
             if token_type == 2:  # barely opened
@@ -246,7 +263,7 @@ def _tokenize(smiles):
             token_type = 3
             tokens.append((3, None))
         # simple atoms
-        elif s in 'NOPSFI':  # organic atoms
+        elif s in 'NOPSFIA':  # organic atoms and the A any-aliphatic wildcard
             if token:
                 tokens.append((token_type, token))
                 token = None
@@ -466,6 +483,18 @@ _extra_symbols = frozenset(('*', 'A', 'a', 'M', 'c', 'n', 'o', 'p', 's', 'b'))
 # Daylight defaults for a primitive written without a count. Bare <r> means
 # "in a ring of any size", which chython spells <R>.
 _bare_primitives = {'D': 'D1', 'X': 'X1', 'H': 'H1', 'h': 'h1', 'r': 'R'}
+# domain of each counting primitive: a negated one is the complement over it.
+# implicit hydrogens stop at 4 - no atom carries more and the packed matcher has no room.
+_count_domains = {'D': ('neighbors', frozenset(range(15))), 'X': ('total_connectivity', frozenset(range(15))),
+                  'H': ('implicit_hydrogens', frozenset(range(5))), 'h': ('implicit_hydrogens', frozenset(range(5))),
+                  'x': ('heteroatoms', frozenset(range(15))), 'R': ('rings_count', frozenset(range(15))),
+                  'z': ('hybridization', frozenset(range(1, 5))), 'v': ('valence', frozenset(range(9)))}
+
+
+def _expand_bare(primitive):
+    if primitive.startswith('!'):
+        return '!' + _bare_primitives.get(primitive[1:], primitive[1:])
+    return _bare_primitives.get(primitive, primitive)
 
 
 def _lex_primitives(text):
@@ -504,7 +533,7 @@ def _lex_primitives(text):
                 i += 1
         elif text[i:i + 2] in _two_letter_elements:  # before D/H/R/X: [Dy] [He] [Rh] [Xe]
             i += 2
-        elif c in 'DXRHrhxzv':
+        elif c in 'DXRHrhxzva':
             i += 1
             while i < n and text[i].isdigit():
                 i += 1
@@ -522,6 +551,8 @@ def _is_element_term(term):
         if p in _extra_symbols or p in _elements or p in _two_letter_elements:
             continue
         elif p.startswith('#') and p[1:].isdigit():
+            continue
+        elif p.startswith('a') and p[1:].isdigit():  # aromatic with a neighbors count
             continue
         return False
     return True
@@ -553,7 +584,7 @@ def _split_primitives(token):
         if _is_element_term(t) and (not i or t != 'H'):
             element = terms.pop(i)
             break
-    terms = [','.join(_bare_primitives.get(x, x) for x in t.split(',')) for t in terms]
+    terms = [','.join(_expand_bare(x) for x in t.split(',')) for t in terms]
     return [element or 'A'] + terms
 
 
@@ -675,31 +706,35 @@ def _query_parse(token):
             p = [x for x in p.split(',') if x]
             if not p:
                 continue
-            t = p[0][0]
-            if t in ('D', 'h', 'r', 'x', 'z', 'X', 'R', 'H'):
-                # Standard SMARTS primitives
+            negated = p[0][0] == '!'
+            t = p[0][1] if negated else p[0][0]
+            if t in _count_domains or t == 'r':
                 # z and x private chython marks for hybridization and heteroatoms count
-                if len(p) != 1 and len({x[0] for x in p}) > 1:
+                if len({x.lstrip('!')[0] for x in p}) > 1 or any((x[0] == '!') != negated for x in p):
                     raise IncorrectSmarts('Unsupported OR statement')
                 try:
-                    p = [int(x[1:]) for x in p]
+                    values = [int(x[2:] if negated else x[1:]) for x in p]
                 except ValueError:
                     raise IncorrectSmarts(f'Invalid primitive value')
 
-                if t == 'D':
-                    out['neighbors'] = p
-                elif t == 'h' or t == 'H':
-                    out['implicit_hydrogens'] = p
-                elif t == 'r':
-                    out['ring_sizes'] = p
-                elif t == 'x':
-                    out['heteroatoms'] = p
-                elif t == 'X':
-                    out['total_connectivity'] = p
-                elif t == 'R':
-                    out['rings_count'] = p
-                else:  # z
-                    out['hybridization'] = p
+                if t == 'r':
+                    if not negated:  # r0 is the not-in-ring mark, which ring_sizes spells as a bare zero
+                        out['ring_sizes'] = 0 if values == [0] else values
+                        continue
+                    elif values != [0]:  # a per-size negation has no place on the atom
+                        raise IncorrectSmarts(f'Unsupported SMARTS primitive: !r{values[0]}')
+                    key, allowed = 'rings_count', set(range(1, 15))  # !r0 - member of any ring
+                else:
+                    key, domain = _count_domains[t]
+                    allowed = set()
+                    for v in values:
+                        allowed |= domain - {v} if negated else {v}
+                if key in out:  # primitives of the same kind are ANDed: [C!H0!H1]
+                    known = out[key]
+                    allowed &= {known} if isinstance(known, int) else set(known)
+                    if not allowed:
+                        raise IncorrectSmarts(f'contradictory {key} constraints')
+                out[key] = sorted(allowed)
             elif all(_is_element_token(x) for x in p):
                 # Element constraint in primitive position (e.g., [*;O,S,P,N] or [*;!#6])
                 extra_elements = []

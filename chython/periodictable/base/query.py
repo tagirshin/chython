@@ -44,6 +44,20 @@ def _validate(value, prop):
         raise TypeError(f'{prop} should be int or list or tuple of ints')
 
 
+# bond orders above one that each hybridization implies. Aromatic atoms have no
+# kekule structure here, so their valence is unknown and left unconstrained.
+_hybridization_bonus = {1: 0, 2: 1, 3: 2}
+
+
+def _valence_match(query, other):
+    if not query._valence:
+        return True
+    bonus = _hybridization_bonus.get(other.hybridization)
+    if bonus is None:  # aromatic
+        return True
+    return other.neighbors + (other.implicit_hydrogens or 0) + bonus in query._valence
+
+
 class Query(ABC):
     __slots__ = ('_neighbors', '_hybridization', '_masked', '_xy')
 
@@ -142,13 +156,15 @@ class Query(ABC):
 
 class ExtendedQuery(Query, ABC):
     __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
-                 '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements')
+                 '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements',
+                 '_valence')
 
     def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, tuple[int, ...], None] = None,
                  ring_sizes: Union[int, tuple[int, ...], None] = None,
                  implicit_hydrogens: Union[int, tuple[int, ...], None] = None, stereo: Optional[bool] = None,
                  total_connectivity: Union[int, tuple[int, ...], None] = None,
                  rings_count: Union[int, tuple[int, ...], None] = None,
+                 valence: Union[int, tuple[int, ...], None] = None,
                  charge_not: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.charge = charge
@@ -159,6 +175,7 @@ class ExtendedQuery(Query, ABC):
         self.stereo = stereo
         self.total_connectivity = total_connectivity
         self.rings_count = rings_count
+        self.valence = valence
         self._charge_not = charge_not
         self._recursive_smarts = None
         self._excluded_elements = None
@@ -260,6 +277,17 @@ class ExtendedQuery(Query, ABC):
         self._rings_count = _validate(value, 'rings_count')
 
     @property
+    def valence(self) -> tuple[int, ...]:
+        """
+        Sum of bond orders, hydrogens included.
+        """
+        return self._valence
+
+    @valence.setter
+    def valence(self, value):
+        self._valence = _validate(value, 'valence')
+
+    @property
     def charge_not(self) -> Optional[str]:
         return self._charge_not
 
@@ -289,6 +317,7 @@ class ExtendedQuery(Query, ABC):
         copy._ring_sizes = self.ring_sizes
         copy._total_connectivity = self.total_connectivity
         copy._rings_count = self._rings_count
+        copy._valence = self._valence
         copy._charge_not = self._charge_not
         copy._recursive_smarts = self._recursive_smarts
         copy._excluded_elements = self._excluded_elements
@@ -369,7 +398,7 @@ class AnyElement(ExtendedQuery):
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
             return False
-        return True
+        return _valence_match(self, other)
 
 
 class ListElement(ExtendedQuery):
@@ -441,7 +470,7 @@ class ListElement(ExtendedQuery):
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
             return False
-        return True
+        return _valence_match(self, other)
 
     def __repr__(self):
         return f'{self.__class__.__name__}([{self.atomic_symbol}])'
@@ -584,7 +613,7 @@ class QueryElement(ExtendedQuery, ABC):
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
             return False
-        return True
+        return _valence_match(self, other)
 
 
 __all__ = ['Query', 'ExtendedQuery', 'QueryElement', 'AnyElement', 'AnyMetal', 'ListElement']
