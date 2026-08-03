@@ -55,23 +55,17 @@ docs = [
     "ipython>=8.12.1"
 ]
 
-[tool.poetry]
-packages = [
-    { include = "chython" }
-]
-include = [
-    { path = "chython/*/*.pyd", format = "wheel" },
-    { path = "chython/*/*.so", format = "wheel" },
-    { path = "chython/files/libinchi/libinchi.*", format = "wheel" }
-]
+[tool.setuptools.packages.find]
+include = ["chython*"]
 
-[tool.poetry.build]
-script = "build.py"
-generate-setup-file = false
+[tool.setuptools.package-data]
+# the prebuilt inchi library only; the cython extensions are installed from
+# ext_modules, so globbing *.so here would also sweep up stale build artifacts
+"chython.files.libinchi" = ["*.dll", "*.so", "*.dylib", "*.dynlib"]
 
 [tool.uv]
 package = true
 
 [build-system]
-requires = ["poetry-core>=2.0.1", "setuptools", "cython>=3.0.5"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=77", "cython>=3.0.5"]
+build-backend = "setuptools.build_meta"

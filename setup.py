@@ -16,10 +16,9 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from Cython.Build import build_ext, cythonize
+from Cython.Build import cythonize
 from pathlib import Path
-from setuptools import Extension
-from setuptools.dist import Distribution
+from setuptools import Extension, setup
 from shutil import copyfile
 from sysconfig import get_platform
 
@@ -41,6 +40,8 @@ else:
     libname = None
     extra_compile_args = []
 
+# the prebuilt inchi library is shipped per-platform and copied in beside the
+# python sources so package_data picks it up
 if libname:
     copyfile(Path('INCHI') / libname, Path('chython/files/libinchi') / libname)
 
@@ -62,11 +63,4 @@ extensions = [
               extra_compile_args=extra_compile_args)
 ]
 
-ext_modules = cythonize(extensions, language_level=3)
-cmd = build_ext(Distribution({'ext_modules': ext_modules}))
-cmd.ensure_finalized()
-cmd.run()
-
-for output in cmd.get_outputs():
-    output = Path(output)
-    copyfile(output, output.relative_to(cmd.build_lib))
+setup(ext_modules=cythonize(extensions, language_level=3))

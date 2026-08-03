@@ -6,10 +6,9 @@ build:
     python: "3.10"
   jobs:
     post_create_environment:
-      - pip install poetry
-      - poetry config virtualenvs.create false
+      - pip install uv
     post_install:
-      - poetry update --with docs
+      - uv pip install --group docs .
 
 sphinx:
   builder: html
