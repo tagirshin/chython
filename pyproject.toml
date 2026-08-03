@@ -1,6 +1,6 @@
 [project]
 name = "chython-synplan"
-version = "1.99"
+version = "1.100"
 description = "Library for processing molecules and reactions in python way"
 authors = [
     { name = "Ramil Nugmanov", email = "nougmanoff@protonmail.com" }
@@ -59,9 +59,10 @@ docs = [
 include = ["chython*"]
 
 [tool.setuptools.package-data]
-# the prebuilt inchi library only; the cython extensions are installed from
-# ext_modules, so globbing *.so here would also sweep up stale build artifacts
+# listed per package rather than globbing *.so across the tree, which would also
+# sweep up stale build artifacts; the cython extensions come from ext_modules
 "chython.files.libinchi" = ["*.dll", "*.so", "*.dylib", "*.dynlib"]
+"chython.algorithms.calculate2d" = ["clean2d.js"]
 
 [tool.uv]
 package = true
