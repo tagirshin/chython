@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _rules():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
     rules = []
 
     # Oxo-acid salts
@@ -40,7 +40,7 @@ def _rules():
     rules.append(q)
 
     # halogenides and hydroxy
-    q = smarts('[O,F,Cl,Br,I;D1;z1:1]')
+    q = smarts('[O,F,Cl,Br,I;D1;z1;+0:1]')
     rules.append(q)
     return rules
 

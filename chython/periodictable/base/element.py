@@ -28,7 +28,7 @@ class Element(ABC):
     __slots__ = ('_isotope', '_charge', '_is_radical', '_xy', '_implicit_hydrogens',
                  '_explicit_hydrogens', '_stereo', '_parsed_mapping',
                  '_neighbors', '_heteroatoms', '_hybridization', '_ring_sizes', '_in_ring', '_extended_stereo',
-                 '_rings_count')
+                 '_rings_count', '_ring_connectivity')
     __class_cache__ = {}
 
     def __init__(self, isotope: Optional[int] = None, *,
@@ -283,6 +283,13 @@ class Element(ABC):
         """
         return self._rings_count
 
+    @property
+    def ring_connectivity(self) -> int:
+        """
+        Number of ring bonds on the atom. Daylight's <x> primitive.
+        """
+        return self._ring_connectivity
+
     def __getstate__(self):
         state = {}
         for cls in type(self).__mro__:
@@ -306,6 +313,8 @@ class Element(ABC):
             self._extended_stereo = None
         if not hasattr(self, '_rings_count'):
             self._rings_count = 0
+        if not hasattr(self, '_ring_connectivity'):
+            self._ring_connectivity = 0
 
     def copy(self, full=False, hydrogens=False, stereo=False) -> 'Element':
         """
@@ -327,6 +336,7 @@ class Element(ABC):
             copy._ring_sizes = self.ring_sizes.copy()
             copy._in_ring = self.in_ring
             copy._rings_count = getattr(self, '_rings_count', 0)
+            copy._ring_connectivity = getattr(self, '_ring_connectivity', 0)
         else:
             if hydrogens:
                 copy._implicit_hydrogens = self.implicit_hydrogens

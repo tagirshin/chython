@@ -24,7 +24,7 @@ def _rules():
     Rules working without Morgan.
     These rules are used for charge canonization for heterocycles
     """
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
     # the order of patterns is important!
@@ -40,31 +40,31 @@ def _rules():
 
     # 1,2,4‐triazole
     # N1C=NC=N1>>N1C=NN=C1
-    q = smarts('[N;a;r5;D2;h1;x1:2]:1:[N;r5;D2;h0;x1]:[C;r5]:[N;r5;D2;h0;x0:1]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h1;y1:2]:1:[N;r5;D2;h0;y1]:[C;r5]:[N;r5;D2;h0;y0:1]:[C;r5]:1')
     rules.append((q, 0))
 
     # tetrazole
     # N1N=CN=N1>>N1C=NN=N1
-    q = smarts('[N;a;r5;D2;h0;x1:1]:1:[N;r5;D2;h1;x2:2]:[N;r5;D2;h0;x2]:[N;r5;D2;h0;x1]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h0;y1:1]:1:[N;r5;D2;h1;y2:2]:[N;r5;D2;h0;y2]:[N;r5;D2;h0;y1]:[C;r5]:1')
     rules.append((q, 0))
 
     # pyrazole
-    q = smarts('[N;a;r5;D2;h1;x1:1]:1:[N;r5;D2;h0;x1:2]:[C;r5]:[C;r5]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h1;y1:1]:1:[N;r5;D2;h0;y1:2]:[C;r5]:[C;r5]:[C;r5]:1')
     rules.append((q, 1))
 
     # imidazole
-    q = smarts('[N;a;r5;D2;h1;x0:1]:1:[C;r5]:[N;r5;D2;h0;x0:2]:[C;r5]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h1;y0:1]:1:[C;r5]:[N;r5;D2;h0;y0:2]:[C;r5]:[C;r5]:1')
     rules.append((q, 1))
 
     # 1,2,3-triazole
-    q = smarts('[N;a;r5;D2;h1;x1:1]:1:[N;r5;D2;h0;x2]:[N;r5;D2;h0;x1:2]:[C;r5]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h1;y1:1]:1:[N;r5;D2;h0;y2]:[N;r5;D2;h0;y1:2]:[C;r5]:[C;r5]:1')
     rules.append((q, 1))
 
-    q = smarts('[N;a;r5;D2;h0;x1:1]:1:[N;r5;D2;h1;x2:3]:[N;r5;D2;h0;x1:2]:[C;r5]:[C;r5]:1')
+    q = smarts('[N;a;r5;D2;h0;y1:1]:1:[N;r5;D2;h1;y2:3]:[N;r5;D2;h0;y1:2]:[C;r5]:[C;r5]:1')
     rules.append((q, 2))
 
     # amidine, guanidine, etc
-    q = smarts('[N;h0,h1;z2:1]=[C;z2;x2,x3:3]-[N;h1,h2;z1:2]')
+    q = smarts('[N;h0,h1;z2:1]=[C;z2;y2,y3:3]-[N;h1,h2;z1:2]')
     rules.append((q, 3))
     return rules
 

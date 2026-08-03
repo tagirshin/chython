@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _xonyl_groups():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
     # atom 1 - axis
@@ -28,7 +28,7 @@ def _xonyl_groups():
     q = smarts('[N;D3;z2;+]([O;D1;-])=[O;D1]')
     rules.append(q)
 
-    q = smarts('[N,O,S,Se;D1;z2:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At:1][N,O,S,Se;D1:2]')
+    q = smarts('[N,O,S,Se;D1;z2;+0:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At;+0:1][N,O,S,Se;D1;+0:2]')
     rules.append(q)
 
     q = smarts('[N,O,S,Se;D1;z2:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At:1][N,O,S,Se;D1;-:2]')
@@ -40,7 +40,7 @@ def _substituents():
     """
     Rules for switchable functional groups remapping
     """
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 
@@ -72,7 +72,7 @@ def _substituents():
     #      \              \\
     #       OH [2]         O [2]
     #
-    q = smarts('[N,O,S,Se;D1;z2:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At:1][N,O,S,Se;D2:2]')
+    q = smarts('[N,O,S,Se;D1;z2;+0:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At;+0:1][N,O,S,Se;D2;+0:2]')
     rules.append((q, ((2, 3), (3, 2))))
 
     #
@@ -82,7 +82,7 @@ def _substituents():
     #      \              \\
     #       OH [2]         O [2]
     #
-    q = smarts('[N,O,S,Se;D1;z2:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At:1][A:2]')
+    q = smarts('[N,O,S,Se;D1;z2;+0:3]=[C,P,As,Sb,Bi,S,Se,Te,Po,Cl,Br,I,At;+0:1][A;+0:2]')
     rules.append((q, ((3, 2),)))  # possible only: (3, 2)
     return rules
 

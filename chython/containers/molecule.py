@@ -46,9 +46,9 @@ from ..periodictable import DynamicElement, Element, H as _H
 
 
 def _rotable_rules():
-    from ..files.daylight.smarts import strict_smarts as smarts
+    from ..files.daylight.smarts import smarts
 
-    w = smarts('[A;D2,D3,D4]-;!@[A;D2,D3,D4]')
+    w = smarts('[A;D2,D3,D4;+0]-;!@[A;D2,D3,D4;+0]')
     b = [smarts('[N;D2,D3]-;!@[C,S;D2,D3]=[O,N]'), smarts('[N;D2,D3]-;!@[S;D4](=[O,N])=[O,N]')]
     return w, b
 
@@ -666,9 +666,12 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             heteroatoms = 0
             hybridization = 1
             explicit_hydrogens = 0
+            ring_bonds = 0
             anr = atoms_rings.get(n) or False
             for m, bond in m_bond.items():
                 bond._in_ring = anr and (amr := atoms_rings.get(m) or False) and not anr.isdisjoint(amr)  # have common rings
+                if bond._in_ring:
+                    ring_bonds += 1
 
                 if bond == 8:
                     continue
@@ -697,6 +700,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             atom._in_ring = n in atoms_rings_sizes
             atom._ring_sizes = atoms_rings_sizes.get(n) or set()
             atom._rings_count = len(atoms_rings.get(n, set()))
+            atom._ring_connectivity = ring_bonds
 
     def calc_implicit(self, n: int):
         """

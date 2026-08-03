@@ -20,12 +20,12 @@ from lazy_object_proxy import Proxy
 
 
 def _stripped_rules():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 
     # Oxo-acid salts
-    q = smarts('[O,S,Se;D1;z1;-][C,Si,N,P,S,Se,Cl,Br,I]=O')
+    q = smarts('[O,S,Se;D1;z1;-][C,Si,N,P,S,Se,Cl,Br,I;+0]=[O;+0]')
     rules.append(q)
 
     # Thiophosphate salts
@@ -33,7 +33,7 @@ def _stripped_rules():
     rules.append(q)
 
     # Phenole salts, alcoholates
-    q = smarts('[O,S,Se;D1;z1;-][C,N]')
+    q = smarts('[O,S,Se;D1;z1;-][C,N;+0]')
     rules.append(q)
 
     # Nitrate
@@ -51,56 +51,56 @@ def _stripped_rules():
 
 
 def _rules():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = _stripped_rules()
 
     # Guanidine
-    q = smarts('[N;x0;z2]=C(N)N')
+    q = smarts('[N;y0;z2]=C(N)N')
     rules.append(q)
 
     # Oxo-guanidine, Amino-guanidine
-    q = smarts('[N;D2;x1;z2]([O,N])=C(N)N')
+    q = smarts('[N;D2;y1;z2]([O,N])=C(N)N')
     rules.append(q)
 
     # O-alkyl-isourea, S-alkyl-isothiaurea
-    q = smarts('[N;x0;z2]=C([O,S;D2;x0;z1])N')
+    q = smarts('[N;y0;z2]=C([O,S;D2;y0;z1])N')
     rules.append(q)
 
     # Dialkyl imidocarbonate
-    q = smarts('[N;x0;z2]=C([O;D2;x0])[O;D2;x0]')
+    q = smarts('[N;y0;z2]=C([O;D2;y0])[O;D2;y0]')
     rules.append(q)
 
     # Amidine
-    q = smarts('[N;x0;z2]=[C;x2]N')
+    q = smarts('[N;y0;z2;+0]=[C;y2;+0][N;+0]')
     rules.append(q)
 
     # O-alkyl-imidate (oxazoline)
-    q = smarts('[N;x0;z2]=[C;x2][O;D2;x0]')
+    q = smarts('[N;y0;z2;+0]=[C;y2;+0][O;D2;y0;+0]')
     rules.append(q)
 
     # Amidoxime. O-N=C([C,H])N
-    q = smarts('[N;D2;x1;z2](O)=[C;x2]N')
+    q = smarts('[N;D2;y1;z2](O)=[C;y2]N')
     rules.append(q)
 
     # Oxime, Hydrazone. [O,N]-N=C([C,H])[C,H]
-    q = smarts('[N;D2;x1;z2]([N,O])=[C;x1;z2]')
+    q = smarts('[N;D2;y1;z2]([N,O])=[C;y1;z2]')
     rules.append(q)
 
     # Imine
-    q = smarts('[N;x0;z2]=[C;x1;z2]')
+    q = smarts('[N;y0;z2;+0]=[C;y1;z2;+0]')
     rules.append(q)
 
     # Alkyl amine, Hydroxylamine, Hydrazine
-    q = smarts('[N;D1;z1][C,N,O;x1;z1]')
+    q = smarts('[N;D1;z1;+0][C,N,O;y1;z1;+0]')
     rules.append(q)
 
     # Dialkyl amine, Alkyl hydroxylamine, Alkyl hydrazine
-    q = smarts('[N;D2;z1]([C,N,O;x1;z1])[C;x1;z1]')
+    q = smarts('[N;D2;z1;+0]([C,N,O;y1;z1;+0])[C;y1;z1;+0]')
     rules.append(q)
 
     # Trialkyl amine, Dialkyl-hydroxylamine, Dialkyl-hydrazine
-    q = smarts('[N;D3;z1]([C,N,O;x1;z1])([C;x1;z1])[C;x1;z1]')
+    q = smarts('[N;D3;z1]([C,N,O;y1;z1])([C;y1;z1])[C;y1;z1]')
     rules.append(q)
 
     # Pyridine. Imidazole. Triazole. :N:

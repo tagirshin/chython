@@ -324,7 +324,8 @@ class QueryIsomorphism(Isomorphism):
     def _has_extended_query(self):
         if any(
             getattr(a, '_total_connectivity', ()) or getattr(a, '_rings_count', ())
-            or getattr(a, '_valence', ()) or getattr(a, '_recursive_smarts', None)
+            or getattr(a, '_valence', ()) or getattr(a, '_ring_connectivity', ())
+            or getattr(a, '_recursive_smarts', None)
             or getattr(a, '_excluded_elements', None)
             for _, a in self.atoms()
         ):
@@ -507,10 +508,8 @@ class QueryIsomorphism(Isomorphism):
                         else:
                             v1 = 1 << (57 - n)
                             v2 = 0
-                    # unspecified radical/charge match any state
-                    if a._is_radical is None:
-                        radical = 0x300000000000
-                    elif a._is_radical:
+                    # unspecified charge matches any state; radical is always specified
+                    if a._is_radical:
                         radical = 0x200000000000
                     else:
                         radical = 0x100000000000

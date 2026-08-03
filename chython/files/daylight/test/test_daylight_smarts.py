@@ -671,11 +671,11 @@ def test_molecule_smarts_regression():
     ('[N+0]', 'C[NH3+]', 0),
     ('[N+0]', 'CN', 1),
     ('[O-]', '[O-]C(=O)C', 1),
-    # an unmarked atom takes any radical state
-    ('[C;D1]', 'C[CH2]', 2),
-    ('[C;D1;H2]', 'C[CH2]', 1),
+    # an unmarked radical state means non-radical: only the methyl of the ethyl radical matches
+    ('[C;D1]', 'C[CH2]', 1),
+    ('[C;D1;H2]', 'C[CH2]', 0),
 ])
-def test_unspecified_charge_and_radical_match_any(pattern, target, n):
+def test_unspecified_charge_matches_any(pattern, target, n):
     assert len(list(smarts(pattern).get_mapping(smiles(target)))) == n
 
 
@@ -685,13 +685,33 @@ def test_cx_radical_mark_still_constrains():
     assert len(list(q.get_mapping(smiles('CC')))) == 0
 
 
-def test_strict_smarts_pins_unmarked_atoms():
-    # chython's own rule sets are parsed in the strict dialect: unmarked means neutral
-    from chython.files.daylight.smarts import strict_smarts
+def test_standardize_reaches_fixed_point():
+    # the charge-writing rules carry an explicit +0 so they stop matching once they have fired;
+    # without it standardization never settles
+    for s in ('[O-]B(O)(O)O', 'C[N+](C)(C)C', 'CC#N=O', 'NN#C', 'CC(=O)[O-]', '[NH3+]CC(=O)[O-]'):
+        m = smiles(s)
+        m.canonicalize()
+        once = str(m)
+        m.canonicalize()
+        assert str(m) == once, f'{s} does not settle: {once} -> {m}'
 
-    assert len(list(strict_smarts('[N]').get_mapping(smiles('[NH4+]')))) == 0
-    assert len(list(strict_smarts('[N]').get_mapping(smiles('CN')))) == 1
-    assert len(list(strict_smarts('[C;D1]').get_mapping(smiles('C[CH2]')))) == 1
+
+@pytest.mark.parametrize('pattern,target,n', [
+    # x is Daylight ring connectivity: how many of the atom's bonds are ring bonds
+    ('[*;x0]', 'CC(=O)O', 4),
+    ('[*;x2]', 'c1ccccc1', 6),
+    ('[*;x0]', 'c1ccccc1', 0),
+    ('[*;x3]', 'c1ccc2ccccc2c1', 2),   # the two naphthalene fusion carbons
+    ('[*;x2]', 'Cc1ccccc1', 6),        # the methyl is not in a ring
+    # y is chython's heteroatom-neighbour count, which x used to mean
+    ('[C;y2]', 'CC(=O)O', 1),
+    ('[C;y0]', 'CC(=O)O', 1),
+    # r is any ring of that size, unlike RDKit's smallest-ring reading
+    ('[r6]', 'c1ccc2c(c1)CCC2', 6),
+])
+def test_ring_connectivity_and_heteroatoms(pattern, target, n):
+    assert len(list(smarts(pattern).get_mapping(smiles(target),
+                                                automorphism_filter=False))) == n
 
 
 def test_unknown_primitive_raises():

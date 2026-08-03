@@ -157,7 +157,7 @@ class Query(ABC):
 class ExtendedQuery(Query, ABC):
     __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
                  '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements',
-                 '_valence')
+                 '_valence', '_ring_connectivity')
 
     def __init__(self, charge: Optional[int] = None, is_radical: Optional[bool] = None,
                  heteroatoms: Union[int, tuple[int, ...], None] = None,
@@ -166,6 +166,7 @@ class ExtendedQuery(Query, ABC):
                  total_connectivity: Union[int, tuple[int, ...], None] = None,
                  rings_count: Union[int, tuple[int, ...], None] = None,
                  valence: Union[int, tuple[int, ...], None] = None,
+                 ring_connectivity: Union[int, tuple[int, ...], None] = None,
                  charge_not: Optional[str] = None, **kwargs):
         super().__init__(**kwargs)
         self.charge = charge
@@ -177,6 +178,7 @@ class ExtendedQuery(Query, ABC):
         self.total_connectivity = total_connectivity
         self.rings_count = rings_count
         self.valence = valence
+        self.ring_connectivity = ring_connectivity
         self._charge_not = charge_not
         self._recursive_smarts = None
         self._excluded_elements = None
@@ -202,13 +204,18 @@ class ExtendedQuery(Query, ABC):
     @property
     def is_radical(self) -> bool:
         """
-        Radical state of atoms. Unspecified state matches any, but reads as False for patching.
+        Radical state of atoms. Unspecified state means non-radical: SMARTS can assert a radical
+        through the CXSMARTS ``|^1:n|`` block but has no syntax to deny one, so relaxing this the
+        way charge is relaxed would leave "not a radical" impossible to express.
         """
-        return bool(self._is_radical)
+        return self._is_radical
 
     @is_radical.setter
     def is_radical(self, value: Optional[bool]):
-        if value is not None and not isinstance(value, bool):
+        if value is None:
+            self._is_radical = False
+            return
+        if not isinstance(value, bool):
             raise TypeError('bool expected')
         self._is_radical = value
 
@@ -292,6 +299,17 @@ class ExtendedQuery(Query, ABC):
         self._valence = _validate(value, 'valence')
 
     @property
+    def ring_connectivity(self) -> tuple[int, ...]:
+        """
+        Number of ring bonds on the atom. Daylight's <x> primitive.
+        """
+        return self._ring_connectivity
+
+    @ring_connectivity.setter
+    def ring_connectivity(self, value):
+        self._ring_connectivity = _validate(value, 'ring_connectivity')
+
+    @property
     def charge_not(self) -> Optional[str]:
         return self._charge_not
 
@@ -322,6 +340,7 @@ class ExtendedQuery(Query, ABC):
         copy._total_connectivity = self.total_connectivity
         copy._rings_count = self._rings_count
         copy._valence = self._valence
+        copy._ring_connectivity = self._ring_connectivity
         copy._charge_not = self._charge_not
         copy._recursive_smarts = self._recursive_smarts
         copy._excluded_elements = self._excluded_elements
@@ -382,7 +401,7 @@ class AnyElement(ExtendedQuery):
                 return False
         elif self._charge is not None and self._charge != other.charge:
             return False
-        if self._is_radical is not None and self._is_radical != other.is_radical:
+        if self._is_radical != other.is_radical:
             return False
         if self.neighbors and other.neighbors not in self.neighbors:
             return False
@@ -401,6 +420,8 @@ class AnyElement(ExtendedQuery):
         if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
+            return False
+        if self._ring_connectivity and other.ring_connectivity not in self._ring_connectivity:
             return False
         return _valence_match(self, other)
 
@@ -454,7 +475,7 @@ class ListElement(ExtendedQuery):
                 return False
         elif self._charge is not None and self._charge != other.charge:
             return False
-        if self._is_radical is not None and self._is_radical != other.is_radical:
+        if self._is_radical != other.is_radical:
             return False
         if self.neighbors and other.neighbors not in self.neighbors:
             return False
@@ -473,6 +494,8 @@ class ListElement(ExtendedQuery):
         if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
+            return False
+        if self._ring_connectivity and other.ring_connectivity not in self._ring_connectivity:
             return False
         return _valence_match(self, other)
 
@@ -595,7 +618,7 @@ class QueryElement(ExtendedQuery, ABC):
                 return False
         elif self._charge is not None and self._charge != other.charge:
             return False
-        if self._is_radical is not None and self._is_radical != other.is_radical:
+        if self._is_radical != other.is_radical:
             return False
         if self.isotope and self.isotope != other.isotope:
             return False
@@ -616,6 +639,8 @@ class QueryElement(ExtendedQuery, ABC):
         if self.total_connectivity and (other.neighbors + (other.implicit_hydrogens or 0)) not in self.total_connectivity:
             return False
         if self._rings_count and other.rings_count not in self._rings_count:
+            return False
+        if self._ring_connectivity and other.ring_connectivity not in self._ring_connectivity:
             return False
         return _valence_match(self, other)
 

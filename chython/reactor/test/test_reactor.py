@@ -21,11 +21,11 @@ from pytest import mark
 
 
 data = [
-    (('[B;D3;x2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A;@:3]-[A:2]',),
+    (('[B;D3;y2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A;@:3]-[A:2]',),
      ('CC1O[C@@H]1B(O)O', 'Brc1ccccc1'), ('CC1O[C@H]1c1ccccc1',)),  # inverse stereo check
-    (('[B;D3;x2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A;@@:3]-[A:2]',),
+    (('[B;D3;y2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A;@@:3]-[A:2]',),
      ('CC1O[C@@H]1B(O)O', 'Brc1ccccc1'), ('CC1O[C@@H]1c1ccccc1',)),  # keep stereo on RC
-    (('[B;D3;x2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A:3]-[A:2]',),
+    (('[B;D3;y2;z1:4]([O:5])([O:6])-[C;@@;h1:3]1([O;M][C;M]1)', '[Cl,Br,I;D1:1]-[C;a:2]'), ('[A:3]-[A:2]',),
      ('CC1O[C@@H]1B(O)O', 'Brc1ccccc1'), ('CC1OC1c1ccccc1',)),  # drop stereo on RC
 ]
 

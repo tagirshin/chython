@@ -23,7 +23,7 @@ def _rules_single():
     """
     rules without overlapping. these rules can match once to same set of atoms.
     """
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 
@@ -34,7 +34,7 @@ def _rules_single():
     #   / | \     / | \
     #  A  A  A   A  A  A
     #
-    q = smarts('[P;D4;x0;z1]')
+    q = smarts('[P;D4;y0;z1;+0]')
     atom_fix = {1: (1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -145,7 +145,7 @@ def _rules_single():
     #      |             |
     #      A             A
     #
-    q = smarts('[B;D4;z1]')
+    q = smarts('[B;D4;z1;+0]')
     atom_fix = {1: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -157,7 +157,7 @@ def _rules_single():
     #   / | \     / | \
     #  A  A  A   A  A  A
     #
-    q = smarts('[N;D4;z1]')
+    q = smarts('[N;D4;z1;+0]')
     atom_fix = {1: (1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -169,7 +169,7 @@ def _rules_single():
     #      \         \
     #       OH       [O-]
     #
-    q = smarts('[N;D3;z3;x2](=[O;D1])([O;D1])=C')
+    q = smarts('[N;D3;z3;y2](=[O;D1])([O;D1])=C')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ((1, 4, 1),)
     rules.append((q, atom_fix, bonds_fix, True))
@@ -193,7 +193,7 @@ def _rules_single():
     #      \             \\
     #       OH            O
     #
-    q = smarts('[N;D3;z2;x2;+]([O;D1;-])([O;D1])=C')
+    q = smarts('[N;D3;z2;y2;+]([O;D1;-])([O;D1])=C')
     atom_fix = {}
     bonds_fix = ((1, 3, 2), (1, 4, 1))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -271,7 +271,7 @@ def _rules_single():
     #  \\       \\
     #   O        O
     #
-    q = smarts('[N;D2;z3;x2;-](=[O;D1])=[O;D1]')
+    q = smarts('[N;D2;z3;y2;-](=[O;D1])=[O;D1]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 1),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -279,7 +279,7 @@ def _rules_single():
     #
     # [O,C,N] = N # N >> [O,C,N] = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3](#[N;D1])=[C,N,O]')
+    q = smarts('[N;D2;z3;+0](#[N;D1;+0])=[C,N,O;+0]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -295,7 +295,7 @@ def _rules_single():
     #
     #  A - [N+] # N = [N-]  >> A - N = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3;x2](#[N;D2;+][A])=[N;D1;-]')
+    q = smarts('[N;D2;z3;y2](#[N;D2;+][A])=[N;D1;-]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -303,7 +303,7 @@ def _rules_single():
     #
     # A - N = N = N >> A - N = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3;x2](=[N;D2;z2])=[N;D1]')
+    q = smarts('[N;D2;z3;y2;+0](=[N;D2;z2;+0])=[N;D1;+0]')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -311,7 +311,7 @@ def _rules_single():
     #
     # A - NH - N # N >> A - N = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3;x2]([N;D2;z1])#[N;D1]')
+    q = smarts('[N;D2;z3;y2;+0]([N;D2;z1;+0])#[N;D1;+0]')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ((1, 2, 2), (1, 3, 2))
     rules.append((q, atom_fix, bonds_fix, False))
@@ -319,7 +319,7 @@ def _rules_single():
     #
     # [N-] # N = N - A >> [N-] == [N+] == N - A
     #
-    q = smarts('[N;D2;z3;x2](=[N;D2;z2])#[N;D1;-]')
+    q = smarts('[N;D2;z3;y2](=[N;D2;z2])#[N;D1;-]')
     atom_fix = {1: (1, None)}
     bonds_fix = ((1, 3, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -327,7 +327,7 @@ def _rules_single():
     #
     # [N-] == N # N >> [N-] == [N+] == [N-]
     #
-    q = smarts('[N;D2;z3;x2](=[N;D1;-])#[N;D1]')
+    q = smarts('[N;D2;z3;y2](=[N;D1;-])#[N;D1]')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ((1, 3, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -335,7 +335,7 @@ def _rules_single():
     #
     # A - C # N = NH >> A - [CH] = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3;x1](=[N;D1])#[C;D1,D2]')
+    q = smarts('[N;D2;z3;y1;+0](=[N;D1;+0])#[C;D1,D2;+0]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 3, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -343,7 +343,7 @@ def _rules_single():
     # note: order dependent
     # A - C # N = [O,N] >> A - C # [N+] - [O,N-]
     #
-    q = smarts('[N;D2;z3;x1](=[N,O;z2])#[C;D1,D2]')
+    q = smarts('[N;D2;z3;y1](=[N,O;z2])#[C;D1,D2]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 1),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -351,7 +351,7 @@ def _rules_single():
     #
     # [NH2,OH,SH] - N # C - A >> [NH,O,S-] - [N+] # C - A
     #
-    q = smarts('[N;D2;z3;x1]([N,O,S;D1])#[C;D1,D2]')
+    q = smarts('[N;D2;z3;y1;+0]([N,O,S;D1;+0])#[C;D1,D2;+0]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -359,7 +359,7 @@ def _rules_single():
     #
     # A - [NH] - N # C >> A - [N-] - [N+] # C
     #
-    q = smarts('[N;D2;z3;x1]([N;D2;z1])#[C;D1,D2]')
+    q = smarts('[N;D2;z3;y1;+0]([N;D2;z1;+0])#[C;D1,D2;+0]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -367,7 +367,7 @@ def _rules_single():
     #
     # [NH2,OH,SH] - [N+] # [C-] >> [NH,O,S-] - [N+] # [CH]
     #
-    q = smarts('[N;D2;z3;x1;+]([N,O,S;D1])#[C;D1;-]')
+    q = smarts('[N;D2;z3;y1;+]([N,O,S;D1])#[C;D1;-]')
     atom_fix = {2: (-1, None), 3: (1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, True))
@@ -375,7 +375,7 @@ def _rules_single():
     #
     # A - [NH] - [N+] # [C-] >> A - [N-] - [N+] # [CH]
     #
-    q = smarts('[N;D2;z3;x1;+]([N;D2;z1])#[C;D1;-]')
+    q = smarts('[N;D2;z3;y1;+]([N;D2;z1])#[C;D1;-]')
     atom_fix = {2: (-1, None), 3: (1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, True))
@@ -383,7 +383,7 @@ def _rules_single():
     #
     # A - N # C >> A - [N+] # [C-]
     #
-    q = smarts('[N;D2;z3]([A])#[C;D1]')
+    q = smarts('[N;D2;z3;+0]([A;+0])#[C;D1;+0]')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -392,7 +392,7 @@ def _rules_single():
     #
     # A - [C-] = [N+] = [NH] >> A - [CH] = [N+] = [N-]
     #
-    q = smarts('[N;D2;z3;x1;+](=[N;D1])=[C;D1,D2;z2;-]')
+    q = smarts('[N;D2;z3;y1;+](=[N;D1])=[C;D1,D2;z2;-]')
     atom_fix = {2: (-1, None), 3: (1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -439,7 +439,7 @@ def _rules_single():
     #  /           /
     # C           C
     #
-    q = smarts('[N;D3;z3;x1](#[N;D1])(C)C')
+    q = smarts('[N;D3;z3;y1](#[N;D1])(C)C')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -447,7 +447,7 @@ def _rules_single():
     #
     #  C - N = [N+]  >>  C - [N+] # N
     #
-    q = smarts('[N;D1;z2;x1;+]=[N;D2;x1;z2]')
+    q = smarts('[N;D1;z2;y1;+]=[N;D2;y1;z2]')
     atom_fix = {1: (-1, None), 2: (1, None)}
     bonds_fix = ((1, 2, 3),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -455,7 +455,7 @@ def _rules_single():
     #
     #  [N+] - [C-] = O  >>  N = C = O
     #
-    q = smarts('[C;D2;z2;x2;-]([N;D1,D2;z1;+])=[O;D1]')
+    q = smarts('[C;D2;z2;y2;-]([N;D1,D2;z1;+])=[O;D1]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -463,7 +463,7 @@ def _rules_single():
     #
     #  N # C - OH  >>  HN = C = O
     #
-    q = smarts('[N;D1;x0;z3]#[C;D2;z3;x2][O;D1]')
+    q = smarts('[N;D1;y0;z3]#[C;D2;z3;y2][O;D1]')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (2, 3, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -471,7 +471,7 @@ def _rules_single():
     #
     #  N # C - [O-]  >>  [N-] = C = O
     #
-    q = smarts('[N;D1;x0;z3]#[C;D2;z3;x2][O;D1;-]')
+    q = smarts('[N;D1;y0;z3]#[C;D2;z3;y2][O;D1;-]')
     atom_fix = {1: (-1, None), 3: (1, None)}
     bonds_fix = ((1, 2, 2), (2, 3, 2))
     rules.append((q, atom_fix, bonds_fix, False))
@@ -479,7 +479,7 @@ def _rules_single():
     #
     # - [N+] - [O-]  >>  - N = O
     #
-    q = smarts('[O;D1;z1;x1;-][N;D2;z1;+]')
+    q = smarts('[O;D1;z1;y1;-][N;D2;z1;+]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -487,7 +487,7 @@ def _rules_single():
     #
     # CH-N=O >> C=N-OH
     #
-    q = smarts('[O;D1;z2;x1]=[N;D2;x1;z2][C;D1,D2,D3;z1]')
+    q = smarts('[O;D1;z2;y1]=[N;D2;y1;z2][C;D1,D2,D3;z1]')
     atom_fix = {}
     bonds_fix = ((1, 2, 1), (2, 3, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -515,7 +515,7 @@ def _rules_single():
     #
     # fix pyridin-2-one. note: only after amide rule
     #
-    q = smarts('[O,S,N;D1;z2;x0]=[C;D3;r6]1[N;D2;z1][A;z2]-,=[A;z2][A;z2]-,=[A;z2]1')
+    q = smarts('[O,S,N;D1;z2;y0]=[C;D3;r6]1[N;D2;z1][A;z2]-,=[A;z2][A;z2]-,=[A;z2]1')
     atom_fix = {}
     bonds_fix = ((1, 2, 1), (2, 3, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -531,7 +531,7 @@ def _rules_single():
     #
     # fix pyridin-4-one
     #
-    q = smarts('[O,S;D1;z2;x0]=[C;D3;r6]1[A;z2]=[A;z2][N;D2;z1][A;z2]-,=[A;z2]1')
+    q = smarts('[O,S;D1;z2;y0]=[C;D3;r6]1[A;z2]=[A;z2][N;D2;z1][A;z2]-,=[A;z2]1')
     atom_fix = {}
     bonds_fix = ((1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -547,7 +547,7 @@ def _rules_single():
     #      \           \
     #      [O,N]       [O,N]
     #
-    q = smarts('[O;D1;x0;z1]-[C;D3;z2;x2](-[O,N])=C')
+    q = smarts('[O;D1;y0;z1]-[C;D3;z2;y2](-[O,N])=C')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (2, 4, 1))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -557,7 +557,7 @@ def _rules_single():
     #        /                   //
     # C,H - C = C - C,H >> C,H - C - C - C,H
     #
-    q = smarts('[O;D1;z1;x0][C;D2,D3;z2;x1;!R]=[C;z2;x0]')
+    q = smarts('[O;D1;z1;y0][C;D2,D3;z2;y1;!R]=[C;z2;y0]')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (2, 3, 1))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -565,7 +565,7 @@ def _rules_single():
     #
     # fix pyridin. note: don't move.
     #
-    q = smarts('[O,S,N;D1;z2;x0]=[C;D3;r6]1[N;D2;z2]=[A;z2][A;z2]-,=[A;z2][C;D2,D3;z1]1')
+    q = smarts('[O,S,N;D1;z2;y0]=[C;D3;r6]1[N;D2;z2]=[A;z2][A;z2]-,=[A;z2][C;D2,D3;z1]1')
     atom_fix = {}
     bonds_fix = ((1, 2, 1), (2, 7, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -609,7 +609,7 @@ def _rules_single():
     #    / \           / \
     #   F   F         F   F
     #
-    q = smarts('[P;D6;z1]([F;D1])([F;D1])([F;D1])([F;D1])([F;D1])[F;D1]')
+    q = smarts('[P;D6;z1;+0]([F;D1;+0])([F;D1;+0])([F;D1;+0])([F;D1;+0])([F;D1;+0])[F;D1;+0]')
     atom_fix = {1: (-1, None)}
     bonds_fix = ()
     rules.append((q, atom_fix, bonds_fix, False))
@@ -633,7 +633,7 @@ def _rules_single():
     #     /             //
     #   [S-]            S
     #
-    q = smarts('[S;D1;z1;x1;-][P;D4;z2]=[O;D1]')
+    q = smarts('[S;D1;z1;y1;-][P;D4;z2]=[O;D1]')
     atom_fix = {1: (1, None), 3: (-1, None)}
     bonds_fix = ((1, 2, 2), (2, 3, 1))
     rules.append((q, atom_fix, bonds_fix, False))
@@ -645,7 +645,7 @@ def _rules_single():
     #     /             //
     #   [SH]            S
     #
-    q = smarts('[S;D1;z1;x1][P;D4;z2]=[O;D1]')
+    q = smarts('[S;D1;z1;y1][P;D4;z2]=[O;D1]')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (2, 3, 1))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -739,7 +739,7 @@ def _rules_single():
     #  //             /
     #  O            [O-]
     #
-    q = smarts('[S;D3;z3;-](=[O;D1])(=[O;D1])[A]')
+    q = smarts('[S;D3;z3;-](=[O;D1;+0])(=[O;D1;+0])[A;+0]')
     atom_fix = {1: (1, None), 2: (-1, None)}
     bonds_fix = ((1, 2, 1),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -763,7 +763,7 @@ def _rules_single():
     #  //              /
     #  O              [O-]
     #
-    q = smarts('[S;D3;z3;x3;-]([S;D1;-])(=[O;D1])=[O;D1]')
+    q = smarts('[S;D3;z3;y3;-]([S;D1;-])(=[O;D1])=[O;D1]')
     atom_fix = {1: (1, None), 2: (1, None), 3: (-1, None), 4: (-1, None)}
     bonds_fix = ((1, 2, 2), (1, 3, 1), (1, 4, 1))
     rules.append((q, atom_fix, bonds_fix, False))
@@ -805,7 +805,7 @@ def _rules_single():
     #
     # C # C - [O,NH,S]H  >> C=C=[O,NH,S]
     #
-    q = smarts('[C;D2;z3;x1]([N,O,S;D1])#[C;D1,D2]')
+    q = smarts('[C;D2;z3;y1]([N,O,S;D1])#[C;D1,D2]')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (1, 3, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -813,7 +813,7 @@ def _rules_single():
     #
     # C # C - [NH]R  >> C=C=NR
     #
-    q = smarts('[C;D2;z3;x1]([N;D2;z1])#[C;D1,D2]')
+    q = smarts('[C;D2;z3;y1]([N;D2;z1])#[C;D1,D2]')
     atom_fix = {}
     bonds_fix = ((1, 2, 2), (1, 3, 2))
     rules.append((q, atom_fix, bonds_fix, True))
@@ -822,7 +822,7 @@ def _rules_single():
     #
     # [CX1] = O  >> [С-] # [O+]
     #
-    q = smarts('[C;D1;x1;z2]=[O;D1] |^1:0|')
+    q = smarts('[C;D1;y1;z2]=[O;D1] |^1:0|')
     atom_fix = {1: (-1, False), 2: (1, None)}
     bonds_fix = ((1, 2, 3),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -839,7 +839,7 @@ def _rules_single():
     # only after [A-] - [C+] rules!
     #  [C+] - N(R2)  >> C = [N+](R2)
     #
-    q = smarts('[C;D1,D2,D3;z1;+]-[N;D3;z1;x0]')
+    q = smarts('[C;D1,D2,D3;z1;+]-[N;D3;z1;y0]')
     atom_fix = {1: (-1, None), 2: (1, None)}
     bonds_fix = ((1, 2, 2),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -855,7 +855,7 @@ def _rules_single():
     #
     #  [C+] = N(R)  >>  C # [N+](R)
     #
-    q = smarts('[C;D1,D2;z2;x1;+]=[N;D1,D2;z2]')
+    q = smarts('[C;D1,D2;z2;y1;+]=[N;D1,D2;z2]')
     atom_fix = {1: (-1, None), 2: (1, None)}
     bonds_fix = ((1, 2, 3),)
     rules.append((q, atom_fix, bonds_fix, False))
@@ -896,7 +896,7 @@ def _rules_single():
 
 
 def _rules_double():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 

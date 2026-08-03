@@ -23,7 +23,7 @@ template = {
     'templates': [
         {
             # Ar
-            'product': '[C;D2;x0;z3:1](-;!@[C;a:2])#[C;D2;x0;M]',
+            'product': '[C;D2;y0;z3:1](-;!@[C;a:2])#[C;D2;y0;M]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[Br;M]'
@@ -31,7 +31,7 @@ template = {
         },
         {
             # Ac
-            'product': '[C;D2;x0;z3:1](-;!@[C;D3;x1;z2:2]=[O;M])#[C;D2;x0;M]',
+            'product': '[C;D2;y0;z3:1](-;!@[C;D3;y1;z2:2]=[O;M])#[C;D2;y0;M]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[Cl;M]'
@@ -39,7 +39,7 @@ template = {
         },
         {
             # CSP2
-            'product': '[C;D2;x0;z3:1](-;!@[C;x0;z2:2])#[C;D2;x0;M]',
+            'product': '[C;D2;y0;z3:1](-;!@[C;y0;z2:2])#[C;D2;y0;M]',
             'reactants': [
                 '[A:1]',
                 '[A:2]-[Br;M]'

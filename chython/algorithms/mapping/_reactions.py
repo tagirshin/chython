@@ -21,22 +21,22 @@ from lazy_object_proxy import Proxy
 
 def _rules():
     from ... import smiles
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
     raw_rules = []
 
     # phenol etherification
     r = smiles('[OH:5][cH:1]:[cH2:2].[CH3:4][OH:3]>>[CH3:4][O:3][cH:1]:[cH2:2]')
-    m = smarts('[O;D1:5].[O;D1:3]')  # reactant restriction.
+    m = smarts('[O;D1;+0:5].[O;D1;+0:3]')  # reactant restriction.
     raw_rules.append((r, {3: 5}, m))
 
     # esterification
     r = smiles('[OH:2][CH:1]=[O:3].[CH3:4][OH:5]>>[CH3:4][O:2][CH:1]=[O:3]')
-    m = smarts('[O;D1:2].[O;D1:5]')
+    m = smarts('[O;D1;+0:2].[O;D1;+0:5]')
     raw_rules.append((r, {2: 5}, m))
 
     # acid reduction
     r = smiles('[CH3:2][C:1]([OH:3])=[O:4]>>[CH3:2][CH2:1][OH:3]')
-    m = smarts('[O;D1:3]')
+    m = smarts('[O;D1;+0:3]')
     raw_rules.append((r, {3: 4, 4: 3}, m))
 
     # ester reduction
@@ -49,7 +49,7 @@ def _rules():
 
     # peroxide oxirane
     r = smiles('[CH3:6][O:1][OH:5].[CH3:4][CH:2]=[CH2:3]>>[CH3:4][CH:2]1[CH2:3][O:1]1')
-    m = smarts('[O;D1:5]')
+    m = smarts('[O;D1;+0:5]')
     raw_rules.append((r, {1: 5}, m))
 
     # claisen rearrangement

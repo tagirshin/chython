@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _rules():
-    from ...files.daylight.smarts import strict_smarts as smarts
+    from ...files.daylight.smarts import smarts
 
     rules = []
 
@@ -31,7 +31,7 @@ def _rules():
     #           \    ||                  \\    ||
     #        R - N - C               R - [N+]- C
     #
-    q = smarts('[M:1]=[C:2]-1-[N;D3;x0;z1:3]-[C;z2:5]-,=[C;z2:6]-[N;D3;x0;z1:4]-1')
+    q = smarts('[M:1]=[C:2]-1-[N;D3;y0;z1:3]-[C;z2:5]-,=[C;z2:6]-[N;D3;y0;z1:4]-1')
     atom_fix = {2: (-1, None), 3: (1, None)}  # atom: (charge diff, new radical state or None)
     bonds_fix = ((1, 2, 8), (2, 3, 2))
     rules.append((q, atom_fix, bonds_fix))

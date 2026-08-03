@@ -487,7 +487,8 @@ _bare_primitives = {'D': 'D1', 'X': 'X1', 'H': 'H1', 'h': 'h1', 'r': 'R'}
 # implicit hydrogens stop at 4 - no atom carries more and the packed matcher has no room.
 _count_domains = {'D': ('neighbors', frozenset(range(15))), 'X': ('total_connectivity', frozenset(range(15))),
                   'H': ('implicit_hydrogens', frozenset(range(5))), 'h': ('implicit_hydrogens', frozenset(range(5))),
-                  'x': ('heteroatoms', frozenset(range(15))), 'R': ('rings_count', frozenset(range(15))),
+                  'x': ('ring_connectivity', frozenset(range(15))), 'y': ('heteroatoms', frozenset(range(15))),
+                  'R': ('rings_count', frozenset(range(15))),
                   'z': ('hybridization', frozenset(range(1, 5))), 'v': ('valence', frozenset(range(9)))}
 
 
@@ -533,7 +534,7 @@ def _lex_primitives(text):
                 i += 1
         elif text[i:i + 2] in _two_letter_elements:  # before D/H/R/X: [Dy] [He] [Rh] [Xe]
             i += 2
-        elif c in 'DXRHrhxzva':
+        elif c in 'DXRHrhxyzva':
             i += 1
             while i < n and text[i].isdigit():
                 i += 1
@@ -585,7 +586,8 @@ def _split_primitives(token):
             element = terms.pop(i)
             break
     terms = [','.join(_expand_bare(x) for x in t.split(',')) for t in terms]
-    return [element or 'A'] + terms
+    # a bracket with no element is any atom, so '*' — not 'A', which is any *aliphatic* atom
+    return [element or '*'] + terms
 
 
 def _query_parse(token):
@@ -631,6 +633,7 @@ def _query_parse(token):
     # Also handle * (any atom) and a (any aromatic atom)
     # Handle negated elements: !#6, !C, etc.
     aromatic_from_symbol = False
+    aliphatic_from_symbol = False
     if isinstance(element, str):
         if element.startswith('!'):
             # Negated element: !#6 = not carbon, !N = not nitrogen
@@ -645,6 +648,8 @@ def _query_parse(token):
             element = 'A'
         elif element == '*':
             element = 'A'
+        elif element == 'A':  # Daylight: A is any aliphatic atom, * is any atom
+            aliphatic_from_symbol = True
         elif element == 'a':
             element = 'A'
             aromatic_from_symbol = True
@@ -692,8 +697,8 @@ def _query_parse(token):
             continue
         elif p == 'a':  # aromatic atom
             out['hybridization'] = 4
-        elif p == 'A':  # ignore aliphatic mark. Ad-Hoc for Marwin.
-            continue
+        elif p == 'A':  # aliphatic mark
+            out['hybridization'] = [1, 2, 3]
         elif p == '!a':  # not aromatic = aliphatic
             out['hybridization'] = [1, 2, 3]
         elif p == '!R':
@@ -709,7 +714,7 @@ def _query_parse(token):
             negated = p[0][0] == '!'
             t = p[0][1] if negated else p[0][0]
             if t in _count_domains or t == 'r':
-                # z and x private chython marks for hybridization and heteroatoms count
+                # y and z are chython marks for heteroatom count and hybridization; x is Daylight's ring bonds
                 if len({x.lstrip('!')[0] for x in p}) > 1 or any((x[0] == '!') != negated for x in p):
                     raise IncorrectSmarts('Unsupported OR statement')
                 try:
@@ -777,6 +782,8 @@ def _query_parse(token):
     # Infer aromatic hybridization from lowercase symbol if not explicitly set
     if aromatic_from_symbol and 'hybridization' not in out:
         out['hybridization'] = 4
+    elif aliphatic_from_symbol and 'hybridization' not in out:
+        out['hybridization'] = [1, 2, 3]
     elif not aromatic_from_symbol and 'hybridization' not in out:
         # Standard SMARTS: uppercase aromaticity-capable symbol = aliphatic.
         # Marker is relaxed by the parser if the atom has an aromatic bond.

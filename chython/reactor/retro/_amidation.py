@@ -22,14 +22,14 @@ template = {
     'description': 'Amide Coupling with Amines and Acids/Halo-Anhydrides',
     'templates': [
         {
-            'product': '[N;D2,D3;z1:1]-;!@[C;x2;z2:2]=[O;M]',  # any SP3 nitrogen with carboxy
+            'product': '[N;D2,D3;z1:1]-;!@[C;y2;z2:2]=[O;M]',  # any SP3 nitrogen with carboxy
             'reactants': [
                 '[A:1]',
                 '[A:2]-[O;M]'
             ]
         },
         {
-            'product': '[N;D2;z2;x0:1]-;!@[C;x2;z2:2]=[O;M]',  # C=N-C(=O)R
+            'product': '[N;D2;z2;y0:1]-;!@[C;y2;z2:2]=[O;M]',  # C=N-C(=O)R
             'reactants': [
                 '[A:1]',
                 '[A:2]-[O;M]'
