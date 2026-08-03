@@ -1,6 +1,6 @@
 [project]
 name = "chython-synplan"
-version = "1.98"
+version = "1.99"
 description = "Library for processing molecules and reactions in python way"
 authors = [
     { name = "Ramil Nugmanov", email = "nougmanoff@protonmail.com" }
