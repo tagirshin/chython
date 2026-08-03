@@ -23,7 +23,7 @@ def _rules_single():
     """
     rules without overlapping. these rules can match once to same set of atoms.
     """
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 
@@ -896,7 +896,7 @@ def _rules_single():
 
 
 def _rules_double():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 

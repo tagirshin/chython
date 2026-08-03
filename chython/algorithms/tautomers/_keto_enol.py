@@ -20,13 +20,13 @@ from lazy_object_proxy import Proxy
 
 
 def _sugar_group():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     return smarts('[N,O;D1,D2:1][C;z1][C;z2]=[N,O:2]')
 
 
 def _keto_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
     # first atom is H-acceptor
@@ -63,7 +63,7 @@ def _keto_rules():
 
 
 def _enol_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
     # first atom is H-donor

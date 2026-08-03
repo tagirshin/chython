@@ -507,16 +507,17 @@ class QueryIsomorphism(Isomorphism):
                         else:
                             v1 = 1 << (57 - n)
                             v2 = 0
-                    if isinstance(a, QueryElement) and a.isotope:
-                        v3 = 1 << (a.isotope - a.mdl_isotope + 54)
-                        if a.is_radical:
-                            v3 |= 0x200000000000
-                        else:
-                            v3 |= 0x100000000000
-                    elif a.is_radical:  # any isotope
-                        v3 = 0xffffe00000000000
+                    # unspecified radical/charge match any state
+                    if a._is_radical is None:
+                        radical = 0x300000000000
+                    elif a._is_radical:
+                        radical = 0x200000000000
                     else:
-                        v3 = 0xffffd00000000000
+                        radical = 0x100000000000
+                    if isinstance(a, QueryElement) and a.isotope:
+                        v3 = 1 << (a.isotope - a.mdl_isotope + 54) | radical
+                    else:  # any isotope
+                        v3 = 0xffffc00000000000 | radical
 
                     if getattr(a, '_charge_not', None) == 'positive':
                         for _c in range(-4, 1):  # charges -4 to 0
@@ -524,8 +525,10 @@ class QueryIsomorphism(Isomorphism):
                     elif getattr(a, '_charge_not', None) == 'negative':
                         for _c in range(0, 5):  # charges 0 to +4
                             v3 |= 1 << (_c + 39)
+                    elif a._charge is None:
+                        v3 |= 0xff800000000  # charges -4 to +4
                     else:
-                        v3 |= 1 << (a.charge + 39)
+                        v3 |= 1 << (a._charge + 39)
 
                     if not a.implicit_hydrogens:
                         v3 |= 0x7c0000000

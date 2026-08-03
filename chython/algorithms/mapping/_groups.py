@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _xonyl_groups():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
     # atom 1 - axis
@@ -40,7 +40,7 @@ def _substituents():
     """
     Rules for switchable functional groups remapping
     """
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 

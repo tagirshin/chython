@@ -20,7 +20,8 @@ from lazy_object_proxy import Proxy
 
 
 def _rules():
-    from ... import smiles, smarts
+    from ... import smiles
+    from ...files.daylight.smarts import strict_smarts as smarts
     raw_rules = []
 
     # phenol etherification

@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _rules():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 
@@ -105,7 +105,7 @@ def _rules():
 
 
 def _freaks():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 

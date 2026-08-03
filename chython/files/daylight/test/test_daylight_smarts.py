@@ -656,3 +656,55 @@ def test_molecule_smarts_regression():
 
     q = smarts('[C;D2:1]-[Br;D1:2]')
     assert isinstance(q, QueryContainer)
+
+
+@pytest.mark.parametrize('pattern,target,n', [
+    # an unmarked atom takes any charge
+    ('[N]', '[NH4+]', 1),
+    ('[#7]', 'CC[N+](=O)[O-]', 1),
+    ('[O]', '[O-]C(=O)C', 2),
+    ('[N;R0]', 'CC[N+](=O)[O-]', 1),
+    ('[O;$([O-])]', 'CC[N+](=O)[O-]', 1),
+    # an explicit charge still constrains, +0 included
+    ('[N+]', 'C[NH3+]', 1),
+    ('[N+]', 'CN', 0),
+    ('[N+0]', 'C[NH3+]', 0),
+    ('[N+0]', 'CN', 1),
+    ('[O-]', '[O-]C(=O)C', 1),
+    # an unmarked atom takes any radical state
+    ('[C;D1]', 'C[CH2]', 2),
+    ('[C;D1;H2]', 'C[CH2]', 1),
+])
+def test_unspecified_charge_and_radical_match_any(pattern, target, n):
+    assert len(list(smarts(pattern).get_mapping(smiles(target)))) == n
+
+
+def test_cx_radical_mark_still_constrains():
+    q = smarts('[C;D1] |^1:0|')
+    assert len(list(q.get_mapping(smiles('C[CH2]')))) == 1
+    assert len(list(q.get_mapping(smiles('CC')))) == 0
+
+
+def test_strict_smarts_pins_unmarked_atoms():
+    # chython's own rule sets are parsed in the strict dialect: unmarked means neutral
+    from chython.files.daylight.smarts import strict_smarts
+
+    assert len(list(strict_smarts('[N]').get_mapping(smiles('[NH4+]')))) == 0
+    assert len(list(strict_smarts('[N]').get_mapping(smiles('CN')))) == 1
+    assert len(list(strict_smarts('[C;D1]').get_mapping(smiles('C[CH2]')))) == 1
+
+
+def test_unknown_primitive_raises():
+    from chython.exceptions import IncorrectSmarts
+
+    with pytest.raises(IncorrectSmarts):
+        smarts('[C;Q]')
+    with pytest.raises(IncorrectSmarts):
+        smarts('[CQ]')
+
+
+def test_unmarked_product_atom_is_neutral():
+    # matching is relaxed, patching is not: an unmarked product atom still writes charge 0
+    rxn = smarts('[N+;D4:1]>>[N:1]')
+    products = [str(r).split('>>')[1] for r in rxn.to_reactor()(smiles('C[N+](C)(C)C'))]
+    assert products == ['CN(C)(C)C']

@@ -159,7 +159,8 @@ class ExtendedQuery(Query, ABC):
                  '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements',
                  '_valence')
 
-    def __init__(self, charge: int = 0, is_radical: bool = False, heteroatoms: Union[int, tuple[int, ...], None] = None,
+    def __init__(self, charge: Optional[int] = None, is_radical: Optional[bool] = None,
+                 heteroatoms: Union[int, tuple[int, ...], None] = None,
                  ring_sizes: Union[int, tuple[int, ...], None] = None,
                  implicit_hydrogens: Union[int, tuple[int, ...], None] = None, stereo: Optional[bool] = None,
                  total_connectivity: Union[int, tuple[int, ...], None] = None,
@@ -183,12 +184,15 @@ class ExtendedQuery(Query, ABC):
     @property
     def charge(self) -> int:
         """
-        Charge of atom
+        Charge of atom. Unspecified charge matches any charge, but reads as 0 for patching.
         """
-        return self._charge
+        return 0 if self._charge is None else self._charge
 
     @charge.setter
-    def charge(self, value: int):
+    def charge(self, value: Optional[int]):
+        if value is None:  # unspecified: matches any charge
+            self._charge = None
+            return
         if not isinstance(value, int):
             raise TypeError('formal charge should be int in range [-4, 4]')
         elif value > 4 or value < -4:
@@ -198,13 +202,13 @@ class ExtendedQuery(Query, ABC):
     @property
     def is_radical(self) -> bool:
         """
-        Radical state of atoms
+        Radical state of atoms. Unspecified state matches any, but reads as False for patching.
         """
-        return self._is_radical
+        return bool(self._is_radical)
 
     @is_radical.setter
-    def is_radical(self, value: bool):
-        if not isinstance(value, bool):
+    def is_radical(self, value: Optional[bool]):
+        if value is not None and not isinstance(value, bool):
             raise TypeError('bool expected')
         self._is_radical = value
 
@@ -310,8 +314,8 @@ class ExtendedQuery(Query, ABC):
 
     def copy(self, full=False):
         copy = super().copy(full=full)
-        copy._charge = self.charge
-        copy._is_radical = self.is_radical
+        copy._charge = self._charge
+        copy._is_radical = self._is_radical
         copy._heteroatoms = self.heteroatoms
         copy._implicit_hydrogens = self.implicit_hydrogens
         copy._ring_sizes = self.ring_sizes
@@ -376,9 +380,9 @@ class AnyElement(ExtendedQuery):
         elif self._charge_not == 'negative':
             if other.charge < 0:
                 return False
-        elif self.charge != other.charge:
+        elif self._charge is not None and self._charge != other.charge:
             return False
-        if self.is_radical != other.is_radical:
+        if self._is_radical is not None and self._is_radical != other.is_radical:
             return False
         if self.neighbors and other.neighbors not in self.neighbors:
             return False
@@ -448,9 +452,9 @@ class ListElement(ExtendedQuery):
         elif self._charge_not == 'negative':
             if other.charge < 0:
                 return False
-        elif self.charge != other.charge:
+        elif self._charge is not None and self._charge != other.charge:
             return False
-        if self.is_radical != other.is_radical:
+        if self._is_radical is not None and self._is_radical != other.is_radical:
             return False
         if self.neighbors and other.neighbors not in self.neighbors:
             return False
@@ -589,9 +593,9 @@ class QueryElement(ExtendedQuery, ABC):
         elif self._charge_not == 'negative':
             if other.charge < 0:
                 return False
-        elif self.charge != other.charge:
+        elif self._charge is not None and self._charge != other.charge:
             return False
-        if self.is_radical != other.is_radical:
+        if self._is_radical is not None and self._is_radical != other.is_radical:
             return False
         if self.isotope and self.isotope != other.isotope:
             return False

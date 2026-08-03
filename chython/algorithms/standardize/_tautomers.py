@@ -24,7 +24,7 @@ def _rules():
     Rules working without Morgan.
     These rules are used for charge canonization for heterocycles
     """
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
     # the order of patterns is important!

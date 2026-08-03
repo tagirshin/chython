@@ -20,7 +20,7 @@ from lazy_object_proxy import Proxy
 
 
 def _stripped_rules():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = []
 
@@ -51,7 +51,7 @@ def _stripped_rules():
 
 
 def _rules():
-    from ... import smarts
+    from ...files.daylight.smarts import strict_smarts as smarts
 
     rules = _stripped_rules()
 

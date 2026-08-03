@@ -120,6 +120,8 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
     * bond order list and not bond supported.
     * [not]ring bond supported standalone (@, !@) and combined with orders (-@, -!@, -,=;!@).
     * mapping, charge and isotopes supported.
+    * an unmarked charge or radical state is unconstrained: [N] matches [NH4+], [N+0] does not.
+      `strict_smarts` reads unmarked as neutral instead and backs chython's own rule sets.
     * list of elements supported.
     * A - treats as any element. <A> primitive (aliphatic) ignored.
     * M - treats as any metal
@@ -169,6 +171,28 @@ def smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
         return ReactionContainer(reactants, products, reagents)
 
     return _parse_mol_smarts(data)
+
+
+def strict_smarts(data: str) -> Union[QueryContainer, ReactionContainer]:
+    """
+    Parse SMARTS in chython's strict dialect, where an unmarked atom is neutral and non-radical.
+
+    chython's own rule sets are written this way: a resonance fix like ``[B;D4;z1]`` must stop
+    matching once it has written the charge, otherwise the standardization loop never settles.
+    User-facing `smarts` follows Daylight instead, where an unmarked atom takes any charge.
+    """
+    q = smarts(data)
+    if isinstance(q, ReactionContainer):
+        groups = [*q.reactants, *q.reagents, *q.products]
+    else:
+        groups = [q]
+    for g in groups:
+        for _, a in g.atoms():
+            if getattr(a, '_charge', 0) is None:
+                a._charge = 0
+            if getattr(a, '_is_radical', False) is None:
+                a._is_radical = False
+    return q
 
 
 def _split_trailing_cx(s: str):

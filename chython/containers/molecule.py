@@ -46,7 +46,7 @@ from ..periodictable import DynamicElement, Element, H as _H
 
 
 def _rotable_rules():
-    from .. import smarts
+    from ..files.daylight.smarts import strict_smarts as smarts
 
     w = smarts('[A;D2,D3,D4]-;!@[A;D2,D3,D4]')
     b = [smarts('[N;D2,D3]-;!@[C,S;D2,D3]=[O,N]'), smarts('[N;D2,D3]-;!@[S;D4](=[O,N])=[O,N]')]

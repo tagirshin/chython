@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from .. import smarts, MoleculeContainer
+from .. import MoleculeContainer
+from ..files.daylight.smarts import strict_smarts as smarts
 from .transformer import Transformer
 
 """
