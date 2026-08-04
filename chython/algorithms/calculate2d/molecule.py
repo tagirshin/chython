@@ -17,6 +17,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
+from atexit import register
 from math import sqrt
 from random import random
 from typing import TYPE_CHECKING, Union, Literal
@@ -46,6 +47,9 @@ if MiniRacer is not None:
         ctx = MiniRacer()
         ctx.eval('const self = this')
         ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
+        # MiniRacer.__del__ joins its V8 event-loop thread, which can no longer be
+        # scheduled once finalization starts — close here or the process never exits.
+        register(ctx.close)
     except RuntimeError:
         ctx = None
 

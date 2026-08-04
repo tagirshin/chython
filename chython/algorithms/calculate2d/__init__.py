@@ -18,6 +18,7 @@
 #
 from .molecule import *
 from .reaction import *
+from atexit import register
 from math import sqrt
 from importlib.resources import files
 from random import random
@@ -184,6 +185,9 @@ if MiniRacer is not None:
         ctx = MiniRacer()
         ctx.eval('const self = this')
         ctx.eval(files(__package__).joinpath('clean2d.js').read_text())
+        # MiniRacer.__del__ joins its V8 event-loop thread, which can no longer be
+        # scheduled once finalization starts — close here or the process never exits.
+        register(ctx.close)
     except RuntimeError:
         ctx = None
 
