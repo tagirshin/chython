@@ -39,10 +39,7 @@ except (ImportError, RuntimeError):
         MiniRacer = None
 
 if MiniRacer is not None:
-    try:
-        from importlib.resources import files
-    except ImportError:  # python3.8
-        from importlib_resources import files
+    from importlib.resources import files
     try:
         ctx = MiniRacer()
         ctx.eval('const self = this')
