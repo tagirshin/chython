@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
+import chython
 from collections import defaultdict
 from typing import TYPE_CHECKING
 from ._rules import freak_rules
@@ -187,7 +188,7 @@ class Thiele:
         n_sssr = sum(len(x) for x in rings.values()) // 2 - len(rings) + len(_connected_components(rings))
         if not n_sssr:
             return False
-        rings = sssr(rings, n_sssr)  # search rings again
+        rings = sssr(rings, n_sssr, chython.sssr_timeout)  # search rings again
 
         seen = set()
         for ring in rings:

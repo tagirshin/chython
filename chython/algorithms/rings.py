@@ -16,6 +16,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
+import chython
 from collections import defaultdict, deque
 from functools import cached_property
 from typing import Any, Union, TYPE_CHECKING
@@ -43,7 +44,7 @@ class Rings:
         :return rings atoms numbers
         """
         if self.rings_count:
-            return sssr(_skin_graph(self.not_special_connectivity), self.rings_count)
+            return sssr(_skin_graph(self.not_special_connectivity), self.rings_count, chython.sssr_timeout)
         return []
 
     @cached_property
