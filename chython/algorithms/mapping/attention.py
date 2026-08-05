@@ -17,7 +17,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from chython._cache import class_cached_property
+from functools import cache
 from itertools import chain, count, repeat
 from logging import getLogger, INFO
 from numpy import ix_, unravel_index, argmax, zeros, array, isclose, nonzero, ones, mean
@@ -31,9 +31,17 @@ logger = getLogger('chython.attention')
 logger.setLevel(INFO)
 
 
+@cache
+def _get_attention_model():
+    # torch and chytorch are optional deps, keep them out of import time
+    from chython import torch_device
+    from chytorch.zoo.rxnmap import Model
+
+    return Model().to(torch_device)
+
+
 class Attention:
     __slots__ = ()
-    __class_cache__ = {}
 
     def reset_mapping(self: Union['ReactionContainer', 'Attention'], *, return_score: bool = False, multiplier=1.75,
                       keep_reactants_numbering=False) -> Union[bool, float]:
@@ -175,42 +183,18 @@ class Attention:
         pam = array(pam, dtype=bool)
         return p_atoms[:, None] == r_atoms, ix_(pam, ram), ix_(ram, pam), r_adj, p_adj, r_map, p_map, pa, rg_map
 
-    @class_cached_property
-    def __attention_model(self):
-        from chython import torch_device
-        from chytorch.zoo.rxnmap import Model
-
-        return Model().to(torch_device)
-
-    @class_cached_property
-    def __autocast(self):
-        from chython import torch_device
-
-        if torch_device.startswith('cuda'):
-            try:
-                from torch import autocast
-            except ImportError:  # torch 1.8 ad-hoc
-                from torch.cuda.amp import autocast
-
-                return autocast()
-            else:
-                return autocast('cuda')
-        return autocast_filler()
-
     def __get_attention(self):
+        from chython import torch_device
         from torch import no_grad
 
-        with no_grad(), self.__autocast:
-            am = self.__attention_model(self).float().cpu().numpy()
-        return am
+        model = _get_attention_model()
+        if torch_device.startswith('cuda'):
+            from torch import autocast
 
-
-class autocast_filler:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        ...
+            with no_grad(), autocast('cuda'):
+                return model(self).float().cpu().numpy()
+        with no_grad():
+            return model(self).float().cpu().numpy()
 
 
 __all__ = ['Attention']
