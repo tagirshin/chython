@@ -107,7 +107,11 @@ data = [
         ('O[Cl+2]([O-])[O-]', 'OCl(=O)=O'),
         ('O[Cl+3]([O-])([O-])[O-]', 'OCl(=O)(=O)=O'),
         ('[Cl-]=O', 'Cl[O-]'),
-        ('OS(=N)(=N)O', 'O=S(N)(N)=O'), ('OS(=N)(=N)C', 'O=S(N)(=N)C')
+        ('OS(=N)(=N)O', 'O=S(N)(N)=O'), ('OS(=N)(=N)C', 'O=S(N)(=N)C'),
+        # 5-ring exocyclic imines: move the double bond into the ring
+        ('CN=C1NC=CN1', 'CNC1=NC=CN1'), ('CN=C1NCCN1', 'CNC1=NCCN1'),
+        ('CN=C1NNC=C1', 'CNC1=NNC=C1'), ('CN=C1NNCC1', 'CNC1=NNCC1'),
+        ('N=C1NC=CO1', 'NC1=NC=CO1'), ('CN=C1NOC=C1', 'CNC1=NOC=C1')
 ]
 
 
@@ -116,3 +120,22 @@ def test_group(raw, result):
     tmp = smiles(raw)
     tmp.standardize()
     assert tmp == smiles(result), f'{raw} > {tmp} != {result}'
+
+
+# the 5-ring imine rules must not fire on mesoionic ylides: the anionic ring N has no
+# hydrogen to give up, and unmarked charge in a SMARTS primitive matches any state.
+@mark.parametrize('smi', [
+    'c1ccccc1N=C2[N-]N(C=[N+]2c3ccccc3)c4ccccc4',
+])
+def test_imine_rules_skip_charged_ring_nitrogen(smi):
+    def formula(m):
+        c = {}
+        for _, a in m.atoms():
+            c[a.atomic_symbol] = c.get(a.atomic_symbol, 0) + 1
+            c['H'] = c.get('H', 0) + (a.implicit_hydrogens or 0)
+        return c
+
+    mol = smiles(smi)
+    before = formula(mol)
+    mol.canonicalize()
+    assert formula(mol) == before, 'canonicalize changed the molecular formula'
