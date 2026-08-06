@@ -18,7 +18,6 @@
 #
 from typing import TYPE_CHECKING, Union
 from ._salts import acids, rules
-from ...periodictable import GroupI, GroupII
 
 
 if TYPE_CHECKING:
@@ -28,23 +27,29 @@ if TYPE_CHECKING:
 # atomic number constants
 H = 1
 N = 7
+# s-block metals: GroupI and GroupII except hydrogen
+s_metals = {3, 4, 11, 12, 19, 20, 37, 38, 55, 56, 87, 88}
+s_metals_ammonia = s_metals | {N}
 
 
 class Salts:
     __slots__ = ()
 
-    def remove_metals(self: 'MoleculeContainer', *, logging=False) -> Union[bool, list]:
+    def remove_metals(self: 'MoleculeContainer', *, skip_elements: list[int] = None,
+                      logging=False) -> Union[bool, list]:
         """
         Remove disconnected S-metals and ammonia.
 
+        :param skip_elements: atomic numbers of elements to keep.
         :param logging: return deleted atoms list.
         """
         atoms = self._atoms
         bonds = self._bonds
+        filters = s_metals_ammonia.difference(skip_elements) if skip_elements else s_metals_ammonia
 
         metals = []
         for n, a in atoms.items():
-            if not bonds[n] and (a == N or isinstance(a, (GroupI, GroupII)) and a != H):
+            if not bonds[n] and a.atomic_number in filters:
                 metals.append(n)
 
         if 0 < len(metals) < len(self):
@@ -88,16 +93,19 @@ class Salts:
             return []
         return False
 
-    def split_metal_salts(self: 'MoleculeContainer', *, logging=False) -> Union[bool, list[tuple[int, int]]]:
+    def split_metal_salts(self: 'MoleculeContainer', *, skip_elements: list[int] = None,
+                          logging=False) -> Union[bool, list[tuple[int, int]]]:
         """
         Split connected S-metal salts to cation/anion pairs.
 
+        :param skip_elements: atomic numbers of elements to keep bonded.
         :param logging: return deleted bonds list.
         """
         atoms = self._atoms
         bonds = self._bonds
+        filters = s_metals.difference(skip_elements) if skip_elements else s_metals
 
-        metals = [n for n, a in atoms.items() if isinstance(a, (GroupI, GroupII)) and a != H]
+        metals = [n for n, a in atoms.items() if a.atomic_number in filters]
         if metals:
             acceptors = set()
             log = []

@@ -18,8 +18,6 @@
 #
 from abc import ABCMeta, abstractmethod
 from base64 import urlsafe_b64encode
-from fileinput import FileInput
-from io import StringIO, TextIOWrapper
 from itertools import islice
 from os.path import abspath, join
 from pathlib import Path
@@ -51,11 +49,11 @@ class MDLRead(metaclass=MDLReadMeta):
         elif isinstance(file, Path):
             self._file = file.open()
             self._is_buffer = False
-        elif isinstance(file, (TextIOWrapper, StringIO, FileInput)):
+        elif hasattr(file, '__iter__') and hasattr(file, 'read'):
             self._file = file
             self._is_buffer = True
         else:
-            raise TypeError('invalid file. TextIOWrapper, StringIO or FileInput subclasses or path to file expected')
+            raise TypeError('invalid file. file-like object or path to file expected')
         self._shifts = None
         self._tell = 0
         self._buffer_size = buffer_size

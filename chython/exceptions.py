@@ -123,3 +123,9 @@ class IsNotConnectedAtom(Exception):
     """
     atom already attached to graph
     """
+
+
+class SSSRTimeout(ValueError):
+    """
+    SSSR ring perception exceeded the configured time limit
+    """

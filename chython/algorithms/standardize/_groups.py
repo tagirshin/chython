@@ -536,6 +536,32 @@ def _rules_single():
     bonds_fix = ((1, 2, 1), (2, 3, 2), (3, 4, 1), (4, 5, 2))
     rules.append((q, atom_fix, bonds_fix, True))
 
+    # fix pyraz-imin. move double bond to the ring
+    # +0 on the ring N: unmarked charge matches any state here, and on mesoionic
+    # triazolium ylides the anionic N matches and the fix breaks the valence
+    q = smarts('[N;z2;!R]=[C;D3;r5]1[N;D2;z1;+0][N;z1;+0][A]-,=[A]1')
+    atom_fix = {}
+    bonds_fix = ((1, 2, 1), (2, 3, 2))
+    rules.append((q, atom_fix, bonds_fix, True))
+
+    # fix imidaz-imin. move double bond to the ring
+    q = smarts('[N;z2;!R]=[C;D3;r5]1[N;D2;z1;+0][A]-,=[A][N;z1;+0]1')
+    atom_fix = {}
+    bonds_fix = ((1, 2, 1), (2, 3, 2))
+    rules.append((q, atom_fix, bonds_fix, True))
+
+    # fix oxazol-imin. move double bond to the ring
+    q = smarts('[N;z2;!R]=[C;D3;r5]1[N;D2;z1;+0][A]-,=[A][O,S;D2]1')
+    atom_fix = {}
+    bonds_fix = ((1, 2, 1), (2, 3, 2))
+    rules.append((q, atom_fix, bonds_fix, True))
+
+    # fix oxazol-imin. move double bond to the ring
+    q = smarts('[N;z2;!R]=[C;D3;r5]1[N;D2;z1;+0][O,S;D2][A]-,=[A]1')
+    atom_fix = {}
+    bonds_fix = ((1, 2, 1), (2, 3, 2))
+    rules.append((q, atom_fix, bonds_fix, True))
+
     # todo:
     # [C;a:10][N;H:2][N:3]=[C:4]1[C:5]=,:[C:6][C:7](=[O:1])[C:8]=,:[C:9]1
     # [C;a:10][N;H:2][N:3]=[C:4]1[C:5](=[O:1])[C:6]=,:[C:7]-,:[C:8]=,:[C:9]1

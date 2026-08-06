@@ -103,8 +103,10 @@ class BaseReactor:
                     a.is_radical = ra.is_radical
                     if ra.stereo is not None:  # override stereo
                         a._stereo = ra.stereo
+                        a._extended_stereo = sa.extended_stereo  # stereo swap doesn't resolve uncertainty
                     elif sa.stereo is not None:  # keep original stereo
                         stereo_atoms.append(m)  # mark for stereo fix
+                        a._extended_stereo = sa._extended_stereo  # masked by property if retranslation fails
                 else:
                     raise ValueError("AnyElement doesn't match to pattern")
             else:  # QueryElement or Element
@@ -118,6 +120,7 @@ class BaseReactor:
                     if isinstance(ra, Element):
                         a._implicit_hydrogens = ra.implicit_hydrogens  # keep H count from patch
                         a.xy = ra.xy  # keep coordinates from patch
+                        a._extended_stereo = ra._extended_stereo  # propagate template's extended stereo
                     elif ra.implicit_hydrogens:  # keep H count from patch
                         a._implicit_hydrogens = ra.implicit_hydrogens[0]
                 else:  # existing atoms
@@ -125,8 +128,14 @@ class BaseReactor:
                     a.xy = sa.xy  # preserve existing coordinates
                     if ra.stereo is not None:
                         a._stereo = ra.stereo
+                        # template's extended stereo takes priority (e.g. reaction giving racemic product)
+                        if isinstance(ra, Element) and ra.extended_stereo is not None:
+                            a._extended_stereo = ra.extended_stereo
+                        else:  # stereo swap doesn't resolve uncertainty
+                            a._extended_stereo = sa.extended_stereo
                     elif sa.stereo is not None:  # keep original stereo
                         stereo_atoms.append(m)
+                        a._extended_stereo = sa._extended_stereo
             natoms[m] = a
             nbonds[m] = {}
 
@@ -151,6 +160,7 @@ class BaseReactor:
         for n, sa in satoms.items():  # add unmatched or masked atoms
             if n not in patched_atoms and n not in to_delete:
                 natoms[n] = a = sa.copy(hydrogens=True)
+                a._extended_stereo = sa._extended_stereo  # preserve for atoms outside RC
                 nbonds[n] = {}
                 if sa.stereo is not None:
                     # in case of allenes label can disappear/change, thus, requires recalculation

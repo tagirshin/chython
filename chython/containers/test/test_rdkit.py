@@ -17,7 +17,10 @@
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
 from chython import smiles, from_rdkit_molecule
-from pytest import mark
+from pytest import importorskip, mark
+
+# rdkit is an optional extra: skip rather than fail collection when it is absent
+importorskip('rdkit')
 from rdkit import Chem
 from rdkit.Chem import AllChem
 

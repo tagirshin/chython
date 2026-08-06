@@ -21,6 +21,7 @@ from pathlib import Path
 from setuptools import Extension, setup
 from shutil import copyfile
 from sysconfig import get_platform
+from warnings import warn
 
 
 platform = get_platform()
@@ -29,6 +30,10 @@ if platform == 'win-amd64':
     extra_compile_args = ['/O2']
 elif platform == 'linux-x86_64':
     libname = 'libinchi.so'
+    extra_compile_args = ['-O3']
+elif platform == 'linux-aarch64':
+    # not committed: built from source by ci/build_libinchi.sh during the wheel build
+    libname = 'libinchi_aarch64.so'
     extra_compile_args = ['-O3']
 elif platform.startswith('macosx') and platform.endswith('x86_64'):
     libname = 'libinchi.dynlib'
@@ -43,7 +48,13 @@ else:
 # the prebuilt inchi library is shipped per-platform and copied in beside the
 # python sources so package_data picks it up
 if libname:
-    copyfile(Path('INCHI') / libname, Path('chython/files/libinchi') / libname)
+    src = Path('INCHI') / libname
+    if src.is_file():
+        copyfile(src, Path('chython/files/libinchi') / libname)
+    else:
+        # sdist builds on a platform we ship no binary for still work: the wrapper
+        # warns at import and InChI parsing is unavailable
+        warn(f'{src} not found, building without libinchi')
 
 extensions = [
     Extension('chython.algorithms._isomorphism',

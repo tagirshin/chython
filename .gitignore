@@ -13,3 +13,9 @@ venv
 build
 dist
 MANIFEST
+
+.DS_Store
+.ipynb_checkpoints/
+.claude/
+node_modules/
+_build/

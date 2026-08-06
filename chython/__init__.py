@@ -29,6 +29,9 @@ from .utils import *
 torch_device = 'cpu'  # AAM model device. Change before first `reset_mapping` call!
 clean2d_engine: Literal['smilesdrawer', 'rdkit'] = 'smilesdrawer'
 conformer_engine: Literal['rdkit', 'cdpkit'] = 'rdkit'
+# hard wall-clock limit (seconds) for SSSR ring perception. 0 disables the limit.
+# pathological (highly fused) molecules can otherwise stall for hours; on expiry SSSRTimeout is raised.
+sssr_timeout: float = 0.
 
 
 __all__ = []

@@ -377,9 +377,10 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         """
         if not atoms:
             raise ValueError('empty atoms list not allowed')
-        if set(atoms) - self._atoms.keys():
+        atoms_set = set(atoms)
+        if atoms_set - self._atoms.keys():
             raise ValueError('invalid atom numbers')
-        atoms = tuple(n for n in self if n in atoms)  # save original order
+        atoms = tuple(n for n in self if n in atoms_set)  # save original order
         sub = object.__new__(self.__class__)
         sub._name = sub._meta = sub._changed = sub._backup = None
         sub._atoms = {n: self._atoms[n].copy(hydrogens=not recalculate_hydrogens, stereo=True) for n in atoms}
@@ -389,7 +390,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             for m, bond in self._bonds[n].items():
                 if m in sb:  # bond partially exists. need back-connection.
                     sbn[m] = sb[m][n]
-                elif m in atoms:
+                elif m in atoms_set:
                     sbn[m] = bond.copy(stereo=True)
         sub.fix_structure(recalculate_hydrogens=recalculate_hydrogens)
         sub.fix_stereo()
@@ -652,7 +653,7 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
         self.calc_labels()  # refresh all labels
 
         if recalculate_hydrogens:
-            for n in (self._changed or self._atoms):
+            for n in (self._changed & self._atoms.keys() if self._changed else self._atoms):
                 self.calc_implicit(n)  # fix Hs count
         self._changed = None
 
@@ -783,12 +784,11 @@ class MoleculeContainer(MoleculeStereo, Graph[Element, Bond], Morgan, Rings, Mol
             for k,  v in self.__dict__.items():
                 if k in ('sssr', 'atoms_rings', 'atoms_rings_sizes', 'rings_count'):
                     backup[k] = v
-        if keep_special_connectivity:
+        if keep_special_connectivity and 'not_special_connectivity' in self.__dict__:
             backup['not_special_connectivity'] = self.not_special_connectivity
-        if keep_components:
+        if keep_components and 'connected_components' in self.__dict__:
             # good to keep if no new bonds or bonds deletions
-            if 'connected_components' in self.__dict__:
-                backup['connected_components'] = self.connected_components
+            backup['connected_components'] = self.connected_components
         self.__dict__ = backup
 
     def __int__(self):

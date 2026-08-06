@@ -383,7 +383,7 @@ class DepictMolecule:
             nx, ny = atoms[n].xy
             mx, my = atoms[m].xy
             ny, my = -ny, -my
-            dx, dy = _rotate_vector(0, wedge_space, mx - nx, ny - my)
+            dx, dy = _rotate_vector(0, wedge_space, mx - nx, my - ny)
 
             svg.append(f'      <path d="M{nx:.2f} {ny:.2f} L{mx + dx:.2f} {my + dy:.2f} '
                        f'L{mx - dx:.2f} {my - dy:.2f} Z"{s == 1 and color or ""}/>')

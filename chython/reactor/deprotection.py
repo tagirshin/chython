@@ -326,6 +326,11 @@ _amine_teoc = (  # [F-]
      'c1ccccc1NC(=O)OCC[Si](C)(C)C', 'c1ccccc1N'),
 )
 
+_amine_sem = (
+    ('[N;D2,D3:1]-;!@[C;D2;y2;z1][O;D2;y0]-[C;D2;z1;y1][C;D2;y1;z1][Si;D4;z1;y0]([C;D1])([C;D1])[C;D1]', '[A:1]',
+     'CN(C)COCC[Si](C)(C)C', 'CNC'),
+)
+
 _amine_troc = (  # [Zn]
     ('[N;D2,D3:1]-;!@[C;z2;y3](=O)[O;D2;y0]-[C;D2][C;D4;y3]([Cl;D1])([Cl;D1])[Cl;D1]', '[A:1]',
      'c1ccccc1NC(=O)OCC(Cl)(Cl)Cl', 'c1ccccc1N', 'c1ccccc1NC(=O)OC(C)C(Cl)(Cl)Cl'),
