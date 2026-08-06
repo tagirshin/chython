@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to PyPI. for when a release event was dropped and the build has to be run by hand'
+        type: boolean
+        default: false
 
 jobs:
   build_sdist:
@@ -61,7 +66,8 @@ jobs:
     name: Publish to PyPI
     needs: [build_sdist, build_wheels]
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    # a dispatch stays a safe dry run unless publish is explicitly requested
+    if: github.event_name == 'release' || inputs.publish
     permissions:
       id-token: write
     steps:
@@ -74,3 +80,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
+          # a dropped release event can arrive late and re-run this; do not fail on it
+          skip-existing: true
