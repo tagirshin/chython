@@ -532,6 +532,9 @@ if platform == 'win-amd64':
 elif platform == 'linux-x86_64':
     opt_flag = '-'
     libname = 'libinchi.so'
+elif platform == 'linux-aarch64':
+    opt_flag = '-'
+    libname = 'libinchi_aarch64.so'
 elif platform.startswith('macosx') and platform.endswith('x86_64'):
     opt_flag = '-'
     libname = 'libinchi.dynlib'

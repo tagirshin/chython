@@ -29,6 +29,8 @@ jobs:
         include:
           - os: ubuntu-latest
             cibw_archs: "x86_64"
+          - os: ubuntu-24.04-arm
+            cibw_archs: "aarch64"
           - os: windows-latest
             cibw_archs: "AMD64"
           - os: macos-15-intel
@@ -44,6 +46,12 @@ jobs:
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_ENVIRONMENT_MACOS: "MACOSX_DEPLOYMENT_TARGET=13.0"
+          # aarch64 has no committed libinchi; build it from source in the container
+          CIBW_BEFORE_ALL_LINUX: "bash ci/build_libinchi.sh"
+          # exercise every wheel on its own platform and interpreter. this is what
+          # catches arch-specific breakage such as char signedness on aarch64
+          CIBW_TEST_REQUIRES: "pytest"
+          CIBW_TEST_COMMAND: "python -m pytest --pyargs chython -q"
       - uses: actions/upload-artifact@v4
         with:
           name: cibw-wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
