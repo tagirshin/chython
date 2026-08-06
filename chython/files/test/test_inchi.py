@@ -3,7 +3,10 @@ import pytest
 
 try:
     from chython import inchi
-    HAS_INCHI = True
+    # importing the function always works; the shared library is what may be missing
+    from chython.files.libinchi.wrapper import lib as _inchi_lib
+
+    HAS_INCHI = _inchi_lib is not None
 except ImportError:
     HAS_INCHI = False
 
