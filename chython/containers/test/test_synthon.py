@@ -6,6 +6,7 @@ from sys import executable
 import pytest
 
 from chython import MoleculeContainer, QueryContainer, SynthonContainer, smarts, smiles, synthon_smiles
+from chython.algorithms.calculate2d import molecule as calculate2d
 from chython.containers.synthon import restore_synthons
 from chython.exceptions import IncorrectSmarts, IncorrectSmiles
 from chython.files.daylight.tokenize import atom_re
@@ -290,6 +291,7 @@ def test_copy_and_pickle_keep_the_label():
     assert m.substructure(list(m)[:2]).synthon_labels
 
 
+@pytest.mark.skipif(calculate2d.ctx is None, reason='mini_racer is not installed or broken')
 def test_depict_is_inert_without_labels_and_renders_with_them():
     plain = smiles('O=Cc1ccc(N)cc1')
     plain.clean2d()
