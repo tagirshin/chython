@@ -169,7 +169,8 @@ class Calculate2DMolecule:
     def __clean2d_prepare(self: 'MoleculeContainer', entry):
         w = {n: random() for n in self._atoms}
         w[entry] = -1
-        smiles, order = self._smiles(w.__getitem__, random=True, charges=False, stereo=False, _return_order=True)
+        smiles, order = self._smiles(w.__getitem__, random=True, charges=False, stereo=False,
+                                     synthon_label=False, _return_order=True)
         return ''.join(smiles).replace('~', '-'), order
 
 

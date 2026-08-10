@@ -56,6 +56,7 @@ def _parse_mol_smarts(data: str) -> QueryContainer:
     for i, a in enumerate(parsed['atoms']):
         mapping[i] = n = a.pop('parsed_mapping', 0) or next(global_free_masked if a.get('masked') else free)
         e = a.pop('element')
+        synthon_label = a.pop('synthon_label', None)
         charge_not = a.pop('charge_not', None)
         recursive_smarts_raw = a.pop('recursive_smarts', None)
         excluded_elements = a.pop('excluded_elements', None)
@@ -68,6 +69,8 @@ def _parse_mol_smarts(data: str) -> QueryContainer:
         else:
             e = partial(ListElement, e)
         g.add_atom(e(**a), n)
+        if synthon_label is not None:
+            g.atom(n)._label = synthon_label
         if charge_not:
             g.atom(n)._charge_not = charge_not
         if excluded_elements:

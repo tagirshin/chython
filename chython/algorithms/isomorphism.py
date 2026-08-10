@@ -327,6 +327,9 @@ class QueryIsomorphism(Isomorphism):
             or getattr(a, '_valence', ()) or getattr(a, '_ring_connectivity', ())
             or getattr(a, '_recursive_smarts', None)
             or getattr(a, '_excluded_elements', None)
+            # the cython struct cannot carry a ring-size blacklist, so `!rN` must leave the
+            # fast path or it would be silently ignored rather than loudly unsupported.
+            or getattr(a, '_excluded_ring_sizes', ())
             for _, a in self.atoms()
         ):
             return True

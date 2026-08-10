@@ -16,10 +16,11 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from ..containers import MoleculeContainer, ReactionContainer
+from ..containers import MoleculeContainer, ReactionContainer, SynthonContainer
 from ..containers.bonds import Bond
 from ..exceptions import AtomNotFound
 from ..periodictable import Element
+from ..periodictable.base.synthon import Synthon
 
 
 # atomic number constants
@@ -42,8 +43,10 @@ def create_molecule(data, *, ignore_bad_isotopes=False, skip_calc_implicit=False
         # store conformer
         g._conformers = [{n: (a['x'], a['y'], a['z']) for n, a in zip(mapping, data['atoms'])}]
 
+    # one edit covers every reader: SMILES, SDF, RDF, MRV and InChI all route through here.
+    from_symbol = Synthon.from_symbol if isinstance(g, SynthonContainer) else Element.from_symbol
     for n, atom in zip(mapping, data['atoms']):
-        e = Element.from_symbol(atom.pop('element'))
+        e = from_symbol(atom.pop('element'))
         atom.pop('z', None)  # clean up MDL
         try:
             atoms[n] = e(**atom)

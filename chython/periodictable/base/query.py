@@ -157,11 +157,12 @@ class Query(ABC):
 class ExtendedQuery(Query, ABC):
     __slots__ = ('_charge', '_is_radical', '_heteroatoms', '_ring_sizes', '_implicit_hydrogens', '_stereo',
                  '_total_connectivity', '_rings_count', '_charge_not', '_recursive_smarts', '_excluded_elements',
-                 '_valence', '_ring_connectivity')
+                 '_valence', '_ring_connectivity', '_excluded_ring_sizes', '_label')
 
     def __init__(self, charge: Optional[int] = None, is_radical: Optional[bool] = None,
                  heteroatoms: Union[int, tuple[int, ...], None] = None,
                  ring_sizes: Union[int, tuple[int, ...], None] = None,
+                 excluded_ring_sizes: Union[int, tuple[int, ...], None] = None,
                  implicit_hydrogens: Union[int, tuple[int, ...], None] = None, stereo: Optional[bool] = None,
                  total_connectivity: Union[int, tuple[int, ...], None] = None,
                  rings_count: Union[int, tuple[int, ...], None] = None,
@@ -173,6 +174,7 @@ class ExtendedQuery(Query, ABC):
         self.is_radical = is_radical
         self.heteroatoms = heteroatoms
         self.ring_sizes = ring_sizes
+        self.excluded_ring_sizes = excluded_ring_sizes
         self.implicit_hydrogens = implicit_hydrogens
         self.stereo = stereo
         self.total_connectivity = total_connectivity
@@ -182,6 +184,7 @@ class ExtendedQuery(Query, ABC):
         self._charge_not = charge_not
         self._recursive_smarts = None
         self._excluded_elements = None
+        self._label = None
 
     @property
     def charge(self) -> int:
@@ -260,6 +263,30 @@ class ExtendedQuery(Query, ABC):
             self._ring_sizes = tuple(sorted(value))
         else:
             raise TypeError('rings should be int or list or tuple of ints')
+
+    @property
+    def excluded_ring_sizes(self) -> tuple[int, ...]:
+        """
+        Ring sizes the atom must NOT be a member of. The blacklist beside `ring_sizes`, from `!rN`.
+        """
+        return self._excluded_ring_sizes
+
+    @excluded_ring_sizes.setter
+    def excluded_ring_sizes(self, value):
+        if value is None:
+            self._excluded_ring_sizes = ()
+        elif isinstance(value, int):
+            if value < 3:
+                raise ValueError('excluded rings should be greater or equal 3')
+            self._excluded_ring_sizes = (value,)
+        elif isinstance(value, (tuple, list)):
+            if not all(isinstance(x, int) for x in value):
+                raise TypeError('excluded rings should be list or tuple of ints')
+            if any(x < 3 for x in value):
+                raise ValueError('excluded rings should be greater or equal 3')
+            self._excluded_ring_sizes = tuple(sorted(set(value)))
+        else:
+            raise TypeError('excluded rings should be int or list or tuple of ints')
 
     @property
     def stereo(self):
@@ -344,6 +371,10 @@ class ExtendedQuery(Query, ABC):
         copy._charge_not = self._charge_not
         copy._recursive_smarts = self._recursive_smarts
         copy._excluded_elements = self._excluded_elements
+        # copy() enumerates its slots BY HAND: a slot missing here vanishes silently through
+        # `reduce(or_, products)` in BaseReactor.__init__.
+        copy._excluded_ring_sizes = self._excluded_ring_sizes
+        copy._label = self._label
 
         copy._stereo = self.stereo if full else None
         return copy
@@ -413,6 +444,8 @@ class AnyElement(ExtendedQuery):
                     return False
             elif other.ring_sizes:  # not in ring expected
                 return False
+        if self._excluded_ring_sizes and not other.ring_sizes.isdisjoint(self._excluded_ring_sizes):
+            return False
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:
@@ -487,6 +520,8 @@ class ListElement(ExtendedQuery):
                     return False
             elif other.ring_sizes:  # not in ring expected
                 return False
+        if self._excluded_ring_sizes and not other.ring_sizes.isdisjoint(self._excluded_ring_sizes):
+            return False
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:
@@ -632,6 +667,8 @@ class QueryElement(ExtendedQuery, ABC):
                     return False
             elif other.ring_sizes:  # not in ring expected
                 return False
+        if self._excluded_ring_sizes and not other.ring_sizes.isdisjoint(self._excluded_ring_sizes):
+            return False
         if self.implicit_hydrogens and other.implicit_hydrogens not in self.implicit_hydrogens:
             return False
         if self.heteroatoms and other.heteroatoms not in self.heteroatoms:

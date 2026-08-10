@@ -68,3 +68,22 @@ for k, v in elements.items():
     setattr(modules[v.__module__], name, cls)
     modules[v.__module__].__all__.append(name)
     __all__.append(name)
+
+# imported here, after `elements` is built, so Synthon is not itself collected as an element.
+from .base.synthon import (Synthon, LABEL_TABLE, LABEL_INDEX, SYNTHON_LABELS,  # noqa: E402
+                           BIVALENT_LABELS, ROLE_COLOR)
+
+__all__.extend(['Synthon', 'LABEL_TABLE', 'LABEL_INDEX', 'SYNTHON_LABELS', 'BIVALENT_LABELS', 'ROLE_COLOR'])
+
+synthon_elements = {}
+for k, v in elements.items():
+    name = f'Synthon{k}'
+    # the second base is the CONCRETE element, so `atom == 6` and `atom == 'C'` behave exactly
+    # as for a plain element - which standardize, kekule and the stereo code all depend on.
+    synthon_elements[k] = globals()[name] = cls = type(name, (Synthon, v),
+                                                       {'__module__': v.__module__, '__slots__': (),
+                                                        'atomic_number': v.atomic_number,
+                                                        'mdl_isotope': v.mdl_isotope})
+    setattr(modules[v.__module__], name, cls)
+    modules[v.__module__].__all__.append(name)
+    __all__.append(name)

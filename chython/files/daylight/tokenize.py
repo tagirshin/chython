@@ -21,6 +21,7 @@ from itertools import permutations
 from ...containers.bonds import QueryBond
 from ...exceptions import IncorrectSmiles, IncorrectSmarts
 from ...periodictable import elements
+from ...periodictable.base.synthon import SYNTHON_LABELS
 
 
 # -,= OR bonds supported
@@ -59,7 +60,11 @@ not_charge_re = compile(r'![+-]')
 
 replace_dict = {'-': 1, '=': 2, '#': 3, ':': 4, '~': 8}
 not_dict = {'-': [2, 3, 4], '=': [1, 3, 4], '#': [1, 2, 4], ':': [1, 2, 3]}
-atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsbt][a-ik-pr-vy]?)(@@|@)?(H[1-4]?)?([+-][1-4+-]?)?(:[0-9]{1,4})?')
+# the synthon label is a new bracket field between charge and the atom map. `_` cannot occur in a
+# bracket today, so the optional group changes nothing that parses now.
+synthon_token_re = compile(r'_elec(?:2|\*|B)?|_nuc(?:2|\*)?|_neut2')
+atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsbt][a-ik-pr-vy]?)(@@|@)?(H[1-4]?)?([+-][1-4+-]?)?'
+                  r'(_elec(?:2|\*|B)?|_nuc(?:2|\*)?|_neut2)?(:[0-9]{1,4})?')
 dyn_atom_re = compile(r'([1-9][0-9]{0,2})?([A-IK-PR-Zacnopsb][a-ik-pr-vy]?)([+-0][1-4+-]?(>[+-0][1-4+-]?)?)?([*^](>[*^])?)?')
 charge_dict = {'+': 1, '+0': 0, '+1': 1, '++': 2, '+2': 2, '+3': 3, '+++': 3, '+4': 4, '++++': 4,
                '-': -1, '-0': 0, '-1': -1, '--': -2, '-2': -2, '-3': -3, '---': -3, '-4': -4, '----': -4}
@@ -317,11 +322,11 @@ def _tokenize(smiles):
 
 
 def _atom_parse(token):
-    # [isotope]Element[element][@[@]][H[n]][+-charge][:mapping]
+    # [isotope]Element[element][@[@]][H[n]][+-charge][_synthon][:mapping]
     _match = atom_re.fullmatch(token)
     if _match is None:
         raise IncorrectSmiles(f'atom token invalid {token}')
-    isotope, element, stereo, hydrogen, charge, mapping = _match.groups()
+    isotope, element, stereo, hydrogen, charge, synthon_label, mapping = _match.groups()
 
     if isotope:
         isotope = int(isotope)
@@ -356,8 +361,11 @@ def _atom_parse(token):
         element = element.capitalize()
     else:
         _type = 0
-    return _type, {'element': element, 'isotope': isotope, 'parsed_mapping': mapping, 'charge': charge,
-                   'implicit_hydrogens': hydrogen, 'stereo': stereo}
+    out = {'element': element, 'isotope': isotope, 'parsed_mapping': mapping, 'charge': charge,
+           'implicit_hydrogens': hydrogen, 'stereo': stereo}
+    if synthon_label:  # ONLY when present: Element.__init__ has no such keyword
+        out['synthon_label'] = synthon_label[1:]  # the token WITHOUT its sigil, a str never an int
+    return _type, out
 
 
 def _split_unnested(token, separator):
@@ -538,6 +546,11 @@ def _lex_primitives(text):
             i += 1
             while i < n and text[i].isdigit():
                 i += 1
+        elif c == '_':  # synthon label. consumed whole by regex, or its tail re-lexes as a primitive
+            m = synthon_token_re.match(text, i)
+            if m is None:
+                raise IncorrectSmarts(f'invalid synthon token in [{text}]')
+            i = m.end()
         elif c in _elements or c in _extra_symbols:
             i += 1
         else:
@@ -726,8 +739,11 @@ def _query_parse(token):
                     if not negated:  # r0 is the not-in-ring mark, which ring_sizes spells as a bare zero
                         out['ring_sizes'] = 0 if values == [0] else values
                         continue
-                    elif values != [0]:  # a per-size negation has no place on the atom
-                        raise IncorrectSmarts(f'Unsupported SMARTS primitive: !r{values[0]}')
+                    elif values != [0]:  # !r3;!r4;... - a blacklist beside the ring_sizes whitelist
+                        excluded = set(out.get('excluded_ring_sizes', ()))
+                        excluded.update(values)
+                        out['excluded_ring_sizes'] = sorted(excluded)
+                        continue
                     key, allowed = 'rings_count', set(range(1, 15))  # !r0 - member of any ring
                 else:
                     key, domain = _count_domains[t]
@@ -776,6 +792,8 @@ def _query_parse(token):
                     existing = list(out.get('excluded_elements', ()))
                     existing.extend(extra_excluded)
                     out['excluded_elements'] = tuple(existing)
+            elif len(p) == 1 and p[0][:1] == '_' and p[0][1:] in SYNTHON_LABELS:  # synthon label
+                out['synthon_label'] = p[0][1:]  # token minus its sigil; a membership test
             else:
                 raise IncorrectSmarts(f'Unsupported SMARTS primitive: {p[0]}')
 
