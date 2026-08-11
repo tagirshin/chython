@@ -1,6 +1,6 @@
 [project]
 name = "chython-synplan"
-version = "1.102"
+version = "1.103"
 description = "Library for processing molecules and reactions in python way"
 authors = [
     { name = "Ramil Nugmanov", email = "nougmanoff@protonmail.com" }
@@ -69,3 +69,20 @@ package = true
 [build-system]
 requires = ["setuptools>=77", "cython>=3.0.5"]
 build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 120
+# The fork tracks upstream by backporting individual patches, so reformatting files it does not
+# own would make every future backport conflict. Ruff is scoped to the files the fork adds.
+include = [
+    "chython/periodictable/base/synthon.py",
+    "chython/containers/synthon.py",
+    "chython/containers/test/test_synthon.py",
+]
+
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+# UP/RUF are omitted: the fork keeps upstream's Optional[...] and __all__ conventions.
+select = ["F", "E", "W", "B", "C4"]

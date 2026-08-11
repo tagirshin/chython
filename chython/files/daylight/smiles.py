@@ -23,7 +23,7 @@ from .parser import parser
 from .tokenize import smiles_tokenize
 from .._convert import create_molecule, create_reaction
 from .._mapping import postprocess_parsed_molecule, postprocess_parsed_reaction
-from ...containers import MoleculeContainer, ReactionContainer
+from ...containers import MoleculeContainer, ReactionContainer, SynthonContainer
 from ...exceptions import IsChiral, NotChiral, ValenceError
 
 
@@ -257,4 +257,9 @@ def postprocess_molecule(molecule, data, *, ignore_stereo=False):
             molecule.meta['chython_parsing_log'].extend(log)
 
 
-__all__ = ['smiles']
+def synthon_smiles(data: str, /, **kwargs) -> SynthonContainer:
+    """Parse a SMILES carrying `_token` synthon labels into a SynthonContainer."""
+    return smiles(data, _m_cls=SynthonContainer, **kwargs)
+
+
+__all__ = ['smiles', 'synthon_smiles']

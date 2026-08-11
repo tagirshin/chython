@@ -21,4 +21,4 @@ from .smarts import *
 from .smiles import *
 
 
-__all__ = ['smiles', 'smarts']
+__all__ = ['smiles', 'smarts', 'synthon_smiles']
