@@ -47,12 +47,14 @@ def _glyph_svg(atom, size):
     return g
 
 
-def _bond_dot(mol, n, reach, x, y, font_size, fill):
-    """Dot marking the atom, always left of the glyph run.
+def _bond_dot(mol, n, reach, x, y, font_size, fill, lead):
+    """Dot marking the atom, always left of the glyph run, or None when nowhere is left.
 
     The symbol, its hydrogen count and a trailing tag all grow rightwards, so a rightward bond is
     buried under text for most of its length; the left edge is the one side reliably clear. Rides
-    a leftward bond when one has room, otherwise sits straight out from the glyph edge.
+    a leftward bond when one has room, otherwise sits straight out from the glyph edge - except
+    under a leading tag, which holds that edge itself and would push the fallback a whole tag
+    width into open space. There the tag is the only marker the atom gets.
     """
     r = .16 * font_size
     need = reach[0] + r  # reach[0] already carries the tag width when the tag leads
@@ -62,6 +64,8 @@ def _bond_dot(mol, n, reach, x, y, font_size, fill):
         length = hypot(px - x, py - y)
         if px <= x and need < .45 * length and (best is None or px - x < best[0]):
             best = (px - x, (px - x) * need / length, (py - y) * need / length)
+    if best is None and lead:
+        return None
     dx, dy = best[1:] if best else (-need, 0.)
     return f'    <circle cx="{x + dx:.2f}" cy="{y + dy:.2f}" r="{r:.2f}" fill="{fill}"/>'
 
@@ -156,7 +160,8 @@ class SynthonContainer(MoleculeContainer):
                 # keep the dot off the run. Upgrade path: real text metrics, as for the tag.
                 reach = [.4 * font_size, .66 * font_size * len(_tags.sub('', body)) - .4 * font_size]
                 wide = .6 * size * len(a.glyph)
-                if _crowded_right(self, n, drawn, x, y):
+                lead = _crowded_right(self, n, drawn, x, y)
+                if lead:
                     # lead with the tag and pull the run left by the tag's own width - exact,
                     # because the label font is monospace even though the symbol font is not
                     head = _dx_attr.sub(lambda m: f'dx="{float(m[1]) - wide:.2f}"', head, 1)
@@ -167,7 +172,8 @@ class SynthonContainer(MoleculeContainer):
                     reach[1] += wide
                 define[i] = f'{head}>{body}</text>'
                 # same anchor as a bare vertex, pushed clear of the text-occupied centre
-                dots.append(_bond_dot(self, n, reach, x, y, font_size, fill))
+                if (dot := _bond_dot(self, n, reach, x, y, font_size, fill, lead)) is not None:
+                    dots.append(dot)
                 continue
             # bare vertex: nothing on screen names this atom, so a dot in the label colour does
             dots.append(f'    <circle cx="{x:.2f}" cy="{y:.2f}" r="{.16 * font_size:.2f}" fill="{fill}"/>')
@@ -185,7 +191,7 @@ class SynthonContainer(MoleculeContainer):
                 f'        <text x="{x:.2f}" y="{y:.2f}" dx="{dx:.2f}" dy="{dy:.2f}" '
                 f'text-anchor="{"end" if dx < 0 else "start"}" fill="{fill}">{_glyph_svg(a, size)}</text>'
             )
-        svg.extend(dots)  # every labelled atom has one; only bare vertices also need a text label
+        svg.extend(dots)  # only bare vertices also need a text label beside the dot
         if labels:
             define.append(f'      <g id="{uid}-synthon" font-size="{size:.2f}" font-family="{font}">')
             define.extend(labels)

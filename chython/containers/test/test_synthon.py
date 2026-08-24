@@ -1,7 +1,7 @@
 """SynthonContainer, the `_token` dialect in SMILES and SMARTS, and the reactor post-hook."""
 
 from math import hypot
-from re import search
+from re import finditer, search
 from subprocess import run
 from sys import executable
 
@@ -15,6 +15,7 @@ from chython.exceptions import IncorrectSmarts, IncorrectSmiles
 from chython.files.daylight.tokenize import atom_re
 from chython.periodictable import LABEL_TABLE, ROLE_COLOR, Element, Synthon
 from chython.reactor import Reactor, Transformer
+from chython.utils.grid import grid_depict
 
 
 ROUND_TRIP = [
@@ -335,6 +336,31 @@ def test_tag_leads_when_a_neighbour_glyph_holds_the_trailing_slot():
     svg = m.depict(clean2d=False)
     assert search(r'dy="0.20"><tspan[^>]*>Nu</tspan><tspan', svg)  # tag first, symbol after
     assert search(r'dx="-0.56"', svg)  # run pulled left by the tag width, so NH2 stays on its atom
+
+
+def test_a_leading_tag_takes_the_dots_place_instead_of_pushing_it_off_the_structure():
+    m = synthon_smiles('S[NH2_nuc]')
+    m.atom(1).xy, m.atom(2).xy = (0., 0.), (-.82, 0.)  # tag leads; the one bond runs right
+    svg = m.depict(clean2d=False)
+    # the fallback used to clear the tag too, planting the dot at -1.46 in open space
+    assert not search(r'<circle[^>]*r="0.08"', svg)
+    m = synthon_smiles('SC[NH2_nuc]')  # same crowding, but now a leftward bond with room to spare
+    m.atom(1).xy, m.atom(2).xy, m.atom(3).xy = (.9, 0.), (-1.6, 0.), (0., 0.)
+    assert search(r'<circle cx="-0.64" cy="0.00"[^>]*fill="', m.depict(clean2d=False))
+
+
+def test_grid_captions_never_reach_the_next_cell():
+    ms = [synthon_smiles('[NH2_nuc]C') for _ in range(3)]
+    for m in ms:
+        m.atom(1).xy, m.atom(2).xy = (0., 0.), (.82, 0.)
+    svg = grid_depict(ms, ['query', 'True aromatic C/N swap', 'True gains one C'], clean2d=False)
+    x0, _, w, _ = (float(v) for v in search(r'viewBox="([^"]+)"', svg).group(1).split())
+    half = .3 * .75 * _render_config['font_size']  # the same average advance grid.py budgets with
+    spans = [(float(c[1]) - len(c[2]) * half, float(c[1]) + len(c[2]) * half) for c in
+             finditer(r'<text x="([-\d.]+)"[^>]*text-anchor="middle">([^<]*)<', svg)]
+    assert len(spans) == 3 and '\u2026' in svg  # too wide for their cells, so shortened
+    assert all(a[1] <= b[0] for a, b in zip(spans, spans[1:]))  # "sTwrap" used to happen here
+    assert spans[0][0] >= x0 and spans[-1][1] <= x0 + w
 
 
 # --- the !rN blacklist -------------------------------------------------------------------

@@ -76,11 +76,13 @@ def grid_depict(molecules: list[MoleculeContainer], labels: Optional[list[str]] 
             if m is None:
                 break
             if labels is not None:
-                render_labels.append(f'    <text x="{max_x:.2f}" y="{-shift_y:.2f}">{next(labels)}</text>')
+                left = max_x  # the cell's right edge is only known once the molecule is placed
                 y = shift_y - row_height / 2. - font125  # blank
             else:
                 y = shift_y - row_height / 2.
             max_x = m._fix_plane_mean(max_x, y) + 4. * font_size
+            if labels is not None:
+                render_labels.append((next(labels), left, max_x, -shift_y))
             render.append(m.depict(_embedding=True)[:5])
             if max_x > shift_x:  # get total width
                 shift_x = max_x
@@ -104,7 +106,17 @@ def grid_depict(molecules: list[MoleculeContainer], labels: Optional[list[str]] 
     for atoms, bonds, define, masks, uid in render:
         svg.extend(_graph_svg(atoms, bonds, define, masks, uid, -font125, -font125, _width, _height))
     svg.append(f'  <g font-size="{font75:.2f}" font-family="{symbols_font_style}">')
-    svg.extend(render_labels)
+    # ponytail: .6 em per character is a sans-serif average advance; nothing here can measure
+    # text. Upgrade path: real metrics from the font, as PIL or fontTools would give.
+    advance = .6 * font75
+    lean = 1.5 * font_size  # how far into the 4-font_size gap between cells a caption may spill
+    for text, left, right, y in render_labels:
+        right -= 4. * font_size  # back off the gap, to the molecule's own right edge
+        x = (left + right) / 2.
+        room = 2. * min(x - max(left - lean, -font125), min(right + lean, _width - font125) - x)
+        if len(text) * advance > room:  # shortened, never allowed to reach the next caption
+            text = text[:max(int(room / advance) - 1, 0)] + '\u2026'
+        svg.append(f'    <text x="{x:.2f}" y="{y:.2f}" text-anchor="middle">{text}</text>')
     svg.append('  </g>')
     svg.append('</svg>')
     return '\n'.join(svg)
