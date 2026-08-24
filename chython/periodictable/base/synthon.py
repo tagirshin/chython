@@ -37,7 +37,7 @@ LABEL_TABLE = {
 }
 SYNTHON_LABELS = frozenset(LABEL_TABLE)
 BIVALENT_LABELS = frozenset(k for k, v in LABEL_TABLE.items() if v[1] == 2)
-ROLE_COLOR = {'electrophile': '#D1495B', 'nucleophile': '#00798C', 'neutral': '#5C5C5C'}
+ROLE_COLOR = {'electrophile': '#7D2E8D', 'nucleophile': '#1B7837', 'neutral': '#4A4A4A'}
 # __hash__ MUST NOT hash the token string: str hashing is PYTHONHASHSEED-randomised, so the
 # canonical SMILES of a labelled molecule would differ between processes. This index is the
 # ONE integer at runtime; it never surfaces above __hash__.

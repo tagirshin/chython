@@ -1,5 +1,7 @@
 """SynthonContainer, the `_token` dialect in SMILES and SMARTS, and the reactor post-hook."""
 
+from math import hypot
+from re import search
 from subprocess import run
 from sys import executable
 
@@ -7,10 +9,11 @@ import pytest
 
 from chython import MoleculeContainer, QueryContainer, SynthonContainer, smarts, smiles, synthon_smiles
 from chython.algorithms.calculate2d import molecule as calculate2d
+from chython.algorithms.depict import _render_config
 from chython.containers.synthon import restore_synthons
 from chython.exceptions import IncorrectSmarts, IncorrectSmiles
 from chython.files.daylight.tokenize import atom_re
-from chython.periodictable import LABEL_TABLE, Element, Synthon
+from chython.periodictable import LABEL_TABLE, ROLE_COLOR, Element, Synthon
 from chython.reactor import Reactor, Transformer
 
 
@@ -299,7 +302,39 @@ def test_depict_is_inert_without_labels_and_renders_with_them():
     labelled.clean2d()
     assert '-synthon' not in synthon_smiles('O=Cc1ccc(N)cc1').depict()
     svg = labelled.depict()
-    assert '-synthon' in svg and '#D1495B' in svg and '#00798C' in svg
+    assert '-synthon' in svg and ROLE_COLOR['electrophile'] in svg and ROLE_COLOR['nucleophile'] in svg
+
+
+@pytest.mark.skipif(calculate2d.ctx is None, reason='mini_racer is not installed or broken')
+def test_label_binds_to_whatever_draws_the_atom():
+    amine, bare = synthon_smiles('[NH2_nuc]C'), synthon_smiles('C1CC[CH2_elec]CC1')
+    amine.clean2d()
+    bare.clean2d()
+    # a drawn symbol carries the label as one text run, so it cannot drift or collide
+    assert search(r'>NH<tspan[^>]*>2</tspan><tspan[^>]*>Nu</tspan></text>', amine.depict())
+    # a bare vertex has no glyph to ride: dot on the atom itself, plus a label beside it
+    svg = bare.depict()
+    x = next(a.x for _, a in bare.atoms() if getattr(a, '_label', None))
+    assert search(rf'<circle cx="{x:.2f}"[^>]*fill="', svg)
+    assert search(r'text-anchor="(start|end)"[^>]*>E<', svg)
+
+
+def test_dot_stays_left_of_the_glyph_whichever_way_the_bond_runs():
+    m = synthon_smiles('[NH2_nuc]C')
+    m.atom(1).xy, m.atom(2).xy = (0., 0.), (-1., 0.)  # bond runs left: dot rides it
+    assert search(r'<circle cx="-0.28" cy="0.00"[^>]*fill="', m.depict(clean2d=False))
+    m.atom(2).xy = (0., -1.)  # bond runs straight up, also clear of the text: dot rides it
+    assert search(r'<circle cx="0.00" cy="0.28"[^>]*fill="', m.depict(clean2d=False))
+    m.atom(2).xy = (1., 0.)  # bond runs right, buried under "NH2": dot falls back to the edge
+    assert search(r'<circle cx="-0.28" cy="0.00"[^>]*fill="', m.depict(clean2d=False))
+
+
+def test_tag_leads_when_a_neighbour_glyph_holds_the_trailing_slot():
+    m = synthon_smiles('S[NH2_nuc]')
+    m.atom(1).xy, m.atom(2).xy = (0., 0.), (-.82, 0.)  # sulfur drawn right of the labelled N
+    svg = m.depict(clean2d=False)
+    assert search(r'dy="0.20"><tspan[^>]*>Nu</tspan><tspan', svg)  # tag first, symbol after
+    assert search(r'dx="-0.56"', svg)  # run pulled left by the tag width, so NH2 stays on its atom
 
 
 # --- the !rN blacklist -------------------------------------------------------------------
