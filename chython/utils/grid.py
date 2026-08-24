@@ -91,8 +91,9 @@ def grid_depict(molecules: list[MoleculeContainer], labels: Optional[list[str]] 
         for (_, a), xy in zip(m.atoms(), p):
             a.xy = xy
 
-    _width = shift_x - 1.5 * font_size
-    _height = -shift_y - 1.5 * font_size
+    # 1.5 cropped the last row/column: a plain NH2 already overran it before synthon labels existed
+    _width = shift_x - .5 * font_size
+    _height = -shift_y - .5 * font_size
     if width is None:
         width = f'{_width:.2f}cm'
     if height is None:
