@@ -280,7 +280,7 @@ wheels = [
 
 [[package]]
 name = "chython-synplan"
-version = "1.102"
+version = "1.103"
 source = { editable = "." }
 dependencies = [
     { name = "lazy-object-proxy" },

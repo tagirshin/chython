@@ -18,7 +18,7 @@
 #
 """Molecule whose atoms may carry a Synt-On reaction-centre label."""
 
-from math import cos, sin
+from math import cos, hypot, sin
 from re import compile
 from typing import Optional, Union
 
@@ -30,16 +30,56 @@ from .molecule import MoleculeContainer
 
 
 _label_insert = compile(r'(:[0-9]{1,4})?\]$')
+# the base renderer's own symbol lines, the only <text id=...> it puts in `define`
+_symbol_text = compile(r'<text id="[-0-9a-f]+-([0-9]+)"')
+_dx_attr = compile(r'dx="(-?[0-9.]+)"')
+_tags = compile(r'<[^>]*>')
 
 
 def _glyph_svg(atom, size):
     """Glyph as SVG text content: superscript = bond count, dot = radical mechanism."""
     g = atom.glyph
     if g.endswith('2'):
-        return f'{g[:-1]}<tspan dy="-{0.5 * size:.2f}" font-size="{0.7 * size:.2f}">2</tspan>'
+        # typographic superscript: ~1/3 em up, not half, or the 2 reads as a separate glyph
+        return f'{g[:-1]}<tspan dy="-{0.35 * size:.2f}" font-size="{0.75 * size:.2f}">2</tspan>'
     if g.endswith('.'):
         return f'{g[:-1]}&#183;'
     return g
+
+
+def _bond_dot(mol, n, reach, x, y, font_size, fill, lead):
+    """Dot marking the atom, always left of the glyph run, or None when nowhere is left.
+
+    The symbol, its hydrogen count and a trailing tag all grow rightwards, so a rightward bond is
+    buried under text for most of its length; the left edge is the one side reliably clear. Rides
+    a leftward bond when one has room, otherwise sits straight out from the glyph edge - except
+    under a leading tag, which holds that edge itself and would push the fallback a whole tag
+    width into open space. There the tag is the only marker the atom gets.
+    """
+    r = .16 * font_size
+    need = reach[0] + r  # reach[0] already carries the tag width when the tag leads
+    best = None
+    for m in mol._bonds[n]:
+        px, py = mol._atoms[m].x, -mol._atoms[m].y
+        length = hypot(px - x, py - y)
+        if px <= x and need < .45 * length and (best is None or px - x < best[0]):
+            best = (px - x, (px - x) * need / length, (py - y) * need / length)
+    if best is None and lead:
+        return None
+    dx, dy = best[1:] if best else (-need, 0.)
+    return f'    <circle cx="{x + dx:.2f}" cy="{y + dy:.2f}" r="{r:.2f}" fill="{fill}"/>'
+
+
+def _tag(atom, size, font, fill, up):
+    """The label as a raised tspan, to be spliced into the base renderer's symbol <text>."""
+    return (f'<tspan dy="-{up:.2f}" font-size="{size:.2f}" font-family="{font}" fill="{fill}">'
+            f'{_glyph_svg(atom, size)}</tspan>')
+
+
+def _crowded_right(mol, n, drawn, x, y):
+    """Is another atom's rendered symbol sitting where a trailing tag would land?"""
+    return any(px > x and abs(py - y) < .6 and hypot(px - x, py - y) < 1.6
+               for m in drawn if m != n for px, py in [(mol._atoms[m].x, -mol._atoms[m].y)])
 
 
 class SynthonContainer(MoleculeContainer):
@@ -100,25 +140,65 @@ class SynthonContainer(MoleculeContainer):
         if not labelled:
             return svg, define, mask
         size = _render_config['other_size']
-        offset = 0.9 * _render_config['font_size']
+        font_size = _render_config['font_size']
+        font = _render_config['other_font_style']
         mono = _render_config['monochrome']
-        define.append(
-            f'      <g id="{uid}-synthon" font-size="{size:.2f}" font-family="{_render_config["other_font_style"]}">'
-        )
+        # which define line carries each atom's element symbol; absent = the base drew a bare vertex
+        drawn = {int(m[1]): i for i, line in enumerate(define) if (m := _symbol_text.search(line))}
+        labels, dots = [], []
         for n, a in labelled:
             x, y = a.x, -a.y
-            # the helper Depict already uses for its neighbour/hybridization labels
-            angle = _optimal_label_direction(x, y, [(self._atoms[m].x, -self._atoms[m].y) for m in self._bonds[n]])
-            dx, dy = cos(angle) * offset, sin(angle) * offset
             fill = 'black' if mono else ROLE_COLOR[a.role]
-            define.append(
+            i = drawn.get(n)
+            if i is not None:
+                # ride the symbol, the way the hydrogen count already does: one text run, so the
+                # label can neither drift off its atom nor land on the glyphs of that atom
+                head, body = define[i].split('>', 1)
+                body = body[:body.rindex('</text>')]
+                up = .4 * font_size
+                # ponytail: 0.66 em per character is the base font's average advance, enough to
+                # keep the dot off the run. Upgrade path: real text metrics, as for the tag.
+                reach = [.4 * font_size, .66 * font_size * len(_tags.sub('', body)) - .4 * font_size]
+                wide = .6 * size * len(a.glyph)
+                lead = _crowded_right(self, n, drawn, x, y)
+                if lead:
+                    # lead with the tag and pull the run left by the tag's own width - exact,
+                    # because the label font is monospace even though the symbol font is not
+                    head = _dx_attr.sub(lambda m: f'dx="{float(m[1]) - wide:.2f}"', head, 1)
+                    body = f'{_tag(a, size, font, fill, up)}<tspan dy="{up:.2f}">{body}</tspan>'
+                    reach[0] += wide
+                else:  # trailing tag: span_dy first undoes the hydrogen-count subscript
+                    body += _tag(a, size, font, fill, up + (_render_config['span_dy'] if '<tspan' in body else 0.))
+                    reach[1] += wide
+                define[i] = f'{head}>{body}</text>'
+                # same anchor as a bare vertex, pushed clear of the text-occupied centre
+                if (dot := _bond_dot(self, n, reach, x, y, font_size, fill, lead)) is not None:
+                    dots.append(dot)
+                continue
+            # bare vertex: nothing on screen names this atom, so a dot in the label colour does
+            dots.append(f'    <circle cx="{x:.2f}" cy="{y:.2f}" r="{.16 * font_size:.2f}" fill="{fill}"/>')
+            taken = [(self._atoms[m].x, -self._atoms[m].y) for m in self._bonds[n]]
+            if _render_config['mapping']:  # aam number, anchored end so its box hangs further left
+                taken.append((x - _render_config['dx_m'] - .3 * _render_config['mapping_size'] * len(str(n)),
+                              y + _render_config['dy_m']))
+            # the helper Depict already uses for its neighbour/hybridization labels
+            angle = _optimal_label_direction(x, y, taken)
+            offset = hypot(_render_config['dx_nh'], _render_config['dy_nh'])
+            dx, dy = cos(angle) * offset, sin(angle) * offset
+            if dy > 0:  # a baseline sits at the glyph's foot, so downwards has to clear a cap height
+                dy += .72 * size
+            labels.append(
                 f'        <text x="{x:.2f}" y="{y:.2f}" dx="{dx:.2f}" dy="{dy:.2f}" '
-                f'text-anchor="middle" fill="{fill}">{_glyph_svg(a, size)}</text>'
+                f'text-anchor="{"end" if dx < 0 else "start"}" fill="{fill}">{_glyph_svg(a, size)}</text>'
             )
-        define.append('      </g>')
-        svg.append(f'    <use xlink:href="#{uid}-synthon"/>')
-        if mask:
-            mask.insert(-1, f'          <use xlink:href="#{uid}-synthon" stroke-width="{size * 0.1:.2f}"/>')
+        svg.extend(dots)  # only bare vertices also need a text label beside the dot
+        if labels:
+            define.append(f'      <g id="{uid}-synthon" font-size="{size:.2f}" font-family="{font}">')
+            define.extend(labels)
+            define.append('      </g>')
+            svg.append(f'    <use xlink:href="#{uid}-synthon"/>')
+            if mask:
+                mask.insert(-1, f'          <use xlink:href="#{uid}-synthon" stroke-width="{size * 0.1:.2f}"/>')
         return svg, define, mask
 
 
