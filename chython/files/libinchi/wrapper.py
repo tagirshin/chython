@@ -16,7 +16,8 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with this program; if not, see <https://www.gnu.org/licenses/>.
 #
-from ctypes import c_char, c_double, c_short, c_long, c_char_p, c_byte, POINTER, Structure, cdll, byref
+from ctypes import (c_char, c_double, c_short, c_long, c_char_p, c_byte, POINTER, Structure, cdll, byref,
+                    create_string_buffer)
 from itertools import count
 from sysconfig import get_platform
 from threading import Lock
@@ -100,6 +101,116 @@ def inchi(data, /, *, ignore_stereo: bool = False, _cls=MoleculeContainer) -> Mo
     mol = create_molecule(tmp, skip_calc_implicit=True, _cls=_cls)
     postprocess_molecule(mol, tmp, ignore_stereo=ignore_stereo)
     return mol
+
+
+def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None) -> str:
+    """
+    INCHI string writer.
+
+    Standard INCHI by default. Any given option switches to the non-standard generator.
+
+    :param ignore_stereo: skip stereo data.
+    :param options: libINCHI option names, e.g. ('FixedH', 'RecMet').
+    """
+    if lib is None:
+        raise ImportError('libINCHI not found')
+
+    if options is None:
+        make, free, opts = lib.GetStdINCHI, lib.FreeStdINCHI, b''
+    else:
+        make, free = lib.GetINCHI, lib.FreeINCHI
+        opts = ' '.join(f'{opt_flag}{x}' for x in options).encode()
+
+    atoms, stereo = _inchi_input(molecule, ignore_stereo)
+    inp = InchiInput(atoms, stereo, opts, len(atoms), len(stereo) if stereo is not None else 0)
+    out = InchiOutput()
+    with _lib_lock:  # libINCHI is not reentrant
+        rc = make(byref(inp), byref(out))
+        try:
+            if rc not in (0, 1):  # 0 = ok, 1 = warning
+                raise ValueError(f'INCHI generation failed [{rc}]: {(out.szMessage or b"").decode()}')
+            return out.szInChI.decode()
+        finally:
+            free(byref(out))
+
+
+def inchi_key(molecule, /, *, ignore_stereo: bool = False) -> str:
+    """
+    Standard INCHIKEY writer.
+    """
+    string = to_inchi(molecule, ignore_stereo=ignore_stereo)
+    key = create_string_buffer(28)  # 27 chars and zero terminator
+    with _lib_lock:
+        if rc := lib.GetStdINCHIKeyFromStdINCHI(string.encode(), key):
+            raise ValueError(f'INCHIKEY generation failed [{rc}]')
+    return key.value.decode()
+
+
+def _inchi_input(molecule, ignore_stereo):
+    if any(b == 4 for *_, b in molecule.bonds()):  # inchi_Atom has no aromatic bond type
+        molecule = molecule.copy(keep_sssr=True, keep_components=True)
+        molecule.kekule()
+        if any(b == 4 for *_, b in molecule.bonds()):
+            raise ValueError('kekulization failed')
+
+    mapping = {n: i for i, n in enumerate(molecule._atoms)}
+    bonds = molecule._bonds
+    atoms = (Atom * len(mapping))()
+
+    for n, a in molecule.atoms():
+        atom = atoms[i := mapping[n]]
+        atom.elname = a.atomic_symbol.encode()
+        atom.charge = a.charge
+        atom.radical = 2 if a.is_radical else 0  # doublet
+        atom.isotopic_mass = a.isotope or 0
+        # chython counts hydrogens itself. -1 asks INCHI to do it, used only for unset valence
+        atom.num_iso_H[0] = a.implicit_hydrogens if a.implicit_hydrogens is not None else -1
+        k = 0
+        for m, b in bonds[n].items():
+            if (j := mapping[m]) < i and (o := b.order) != 8:  # list bond once, skip special connectivity
+                atom.neighbor[k] = j
+                atom.bond_type[k] = o
+                k += 1
+        atom.num_bonds = k
+
+    if ignore_stereo:
+        return atoms, None
+
+    stereo = []
+    for n in molecule.stereogenic_tetrahedrons:
+        if molecule._atoms[n].stereo is None:
+            continue
+        env = [*bonds[n]]
+        if len(env) == 4:
+            s = molecule._translate_tetrahedron_sign(n, env)
+        elif len(env) == 3:  # implicit hydrogen. central atom is the view point, which inverts the sign
+            s = not molecule._translate_tetrahedron_sign(n, env)
+            env.insert(0, n)
+        else:
+            continue
+        stereo.append((env, n, 2, s))
+
+    for (n, m), (nn, nm, *_) in molecule.stereogenic_cis_trans.items():
+        i, j = molecule._stereo_cis_trans_centers[n]
+        if bonds[i][j].stereo is None:
+            continue
+        stereo.append(([nn, n, m, nm], None, 1, molecule._translate_cis_trans_sign(n, m, nn, nm)))
+
+    for c, (nn, nm, *_) in molecule.stereogenic_allenes.items():
+        if molecule._atoms[c].stereo is None:
+            continue
+        n, m = molecule._stereo_allenes_terminals[c]
+        stereo.append(([nn, n, m, nm], c, 3, not molecule._translate_allene_sign(c, nn, nm)))
+
+    if not stereo:
+        return atoms, None
+    out = (Stereo0D * len(stereo))()
+    for s0, (env, central, kind, sign) in zip(out, stereo):
+        s0.neighbor[:] = [mapping[x] for x in env]
+        s0.central_atom = mapping[central] if central is not None else -1  # NO_ATOM
+        s0.type = kind
+        s0.parity = 1 if sign else 2  # odd / even
+    return atoms, out
 
 
 def postprocess_molecule(molecule, data, *, ignore_stereo=False):
@@ -281,6 +392,19 @@ class INCHIStructure(Structure):
                 ('szLog', c_char_p),              # log-file ASCII string, contains a human-readable list
                                                   # of recognized options and possibly an Error/warn message
                 ('WarningFlags', (c_long * 2) * 2)]
+
+
+class InchiInput(Structure):
+    _fields_ = [('atom', POINTER(Atom)),          # array of num_atoms elements
+                ('stereo0D', POINTER(Stereo0D)),  # array of num_stereo0D elements or NULL
+                ('szOptions', c_char_p),          # INCHI options, same syntax as in InputINCHI
+                ('num_atoms', c_short),
+                ('num_stereo0D', c_short)]
+
+
+class InchiOutput(Structure):
+    _fields_ = [('szInChI', c_char_p), ('szAuxInfo', c_char_p), ('szMessage', c_char_p), ('szLog', c_char_p)]
+
 
 # copy-pasted from INCHI-API
 #  * Notes: 1. Atom ordering numbers (i, k, and atom[i].neighbor[j] below)
@@ -557,4 +681,4 @@ if libname:
         warn('broken package installation. libinchi not found', ImportWarning)
 
 
-__all__ = ['inchi']
+__all__ = ['inchi', 'to_inchi', 'inchi_key']

@@ -19,4 +19,4 @@
 from .wrapper import *
 
 
-__all__ = ['inchi']
+__all__ = ['inchi', 'to_inchi', 'inchi_key']

@@ -25,5 +25,5 @@ from .SDFrw import *
 from .xyz import *
 
 
-__all__ = ['smiles', 'smarts', 'synthon_smiles', 'mdl_mol', 'mdl_rxn', 'xyz', 'xyz_file', 'inchi']
+__all__ = ['smiles', 'smarts', 'synthon_smiles', 'mdl_mol', 'mdl_rxn', 'xyz', 'xyz_file', 'inchi', 'to_inchi', 'inchi_key']
 __all__.extend(x for x in locals() if x.endswith(('Read', 'Write')))
