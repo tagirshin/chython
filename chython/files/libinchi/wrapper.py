@@ -113,9 +113,14 @@ def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None, inplace:
     :param options: libINCHI option names, e.g. ('FixedH', 'RecMet').
     :param inplace: kekulize the given molecule instead of a copy. Saves the copy on
         aromatic input and leaves the molecule kekulized.
+
+    libINCHI is not reentrant, so every call takes one process-wide lock. Threads
+    give no speed-up here; use processes.
     """
     if lib is None:
         raise ImportError('libINCHI not found')
+    if not molecule._atoms:  # libINCHI leaks on a zero-atom input and returns no message
+        raise ValueError('empty molecule')
 
     if options is None:
         make, free, opts = lib.GetStdINCHI, lib.FreeStdINCHI, b''
@@ -173,6 +178,8 @@ def _inchi_input(molecule, ignore_stereo, inplace=False):
         k = 0
         for m, b in bonds[n].items():
             if (j := mapping[m]) < i and (o := b.order) != 8:  # list bond once, skip special connectivity
+                if k == 20:  # inchi_Atom.neighbor is 20 long
+                    raise ValueError(f"atom '{a.atomic_symbol}' has more than 20 bonds")
                 atom.neighbor[k] = j
                 atom.bond_type[k] = o
                 k += 1
@@ -233,11 +240,14 @@ def postprocess_molecule(molecule, data, *, ignore_stereo=False):
             atom._implicit_hydrogens = 0
 
     for n, p in data['protium'].items():
-        to_add.append((n + 1, next(free), _H(isotope=1, implicit_hydrogens=0)))
+        for _ in range(p):  # the layer states a count, not a single atom
+            to_add.append((n + 1, next(free), _H(isotope=1, implicit_hydrogens=0)))
     for n, p in data['deuterium'].items():
-        to_add.append((n + 1, next(free), _H(isotope=2, implicit_hydrogens=0)))
+        for _ in range(p):  # the layer states a count, not a single atom
+            to_add.append((n + 1, next(free), _H(isotope=2, implicit_hydrogens=0)))
     for n, p in data['tritium'].items():
-        to_add.append((n + 1, next(free), _H(isotope=3, implicit_hydrogens=0)))
+        for _ in range(p):  # the layer states a count, not a single atom
+            to_add.append((n + 1, next(free), _H(isotope=3, implicit_hydrogens=0)))
 
     if to_add:
         for n, m, a in to_add:
@@ -261,7 +271,7 @@ def postprocess_molecule(molecule, data, *, ignore_stereo=False):
     for n, nn, mn, s in data['stereo_allenes']:
         n += 1
         if n in sa:
-            stereo.append((molecule.add_atom_stereo, n, nn + 1, mn + 1, s))
+            stereo.append((molecule.add_atom_stereo, n, (nn + 1, mn + 1), s))
     for n, m, nn, nm, s in data['stereo_cumulenes']:
         n += 1
         if n in ctc:
