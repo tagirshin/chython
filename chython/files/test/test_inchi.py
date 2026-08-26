@@ -2,7 +2,7 @@
 import pytest
 
 try:
-    from chython import smiles, inchi, to_inchi, inchi_key
+    from chython import MoleculeContainer, smiles, inchi, to_inchi, inchi_key
     # importing the function always works; the shared library is what may be missing
     from chython.files.libinchi.wrapper import lib as _inchi_lib
 
@@ -88,6 +88,22 @@ def test_inchi_write_allene(mark, string):
     c = next(iter(mol.stereogenic_allenes))
     nn, nm, *_ = mol.stereogenic_allenes[c]
     mol.add_atom_stereo(c, (nn, nm), mark)
+    assert to_inchi(mol) == string
+    assert to_inchi(inchi(string)) == string  # the reader used to invert the allene parity
+
+
+@pytest.mark.skipif(not HAS_INCHI, reason='libinchi not available')
+@pytest.mark.parametrize('wedge, string', [(1, 'InChI=1S/C5H8/c1-3-5-4-2/h3-4H,1-2H3/t5-/m0/s1'),
+                                           (-1, 'InChI=1S/C5H8/c1-3-5-4-2/h3-4H,1-2H3/t5-/m1/s1')])
+def test_inchi_write_allene_matches_the_drawn_geometry(wedge, string):
+    # penta-2,3-diene drawn along x, the right hand pair in the paper, the left hand one out of it.
+    # libINCHI reads the same geometry as m0 when the wedged methyl points at the viewer
+    mol = MoleculeContainer()
+    n = [mol.add_atom('C', xy=xy) for xy in
+         ((-2., .6), (-1.3, 0.), (0., 0.), (1.3, 0.), (2., 1.2))]
+    for i in range(4):
+        mol.add_bond(n[i], n[i + 1], 1 if i in (0, 3) else 2)
+    mol.add_wedge(n[1], n[0], wedge)
     assert to_inchi(mol) == string
 
 

@@ -88,7 +88,8 @@ def inchi(data, /, *, ignore_stereo: bool = False, _cls=MoleculeContainer) -> Mo
                         stereo_atoms.append((stereo.central_atom, stereo.neighbors, sign))
                     elif stereo.is_allene:
                         nn, *_, nm = stereo.neighbors
-                        stereo_allenes.append((stereo.central_atom, nn, nm, sign))
+                        # allene parity is inverted relative to chython's sign. see _inchi_input
+                        stereo_allenes.append((stereo.central_atom, nn, nm, not sign))
                     elif stereo.is_cumulene:
                         nn, n, m, nm = stereo.neighbors
                         stereo_cumulenes.append((n, m, nn, nm, sign))
@@ -212,6 +213,8 @@ def _inchi_input(molecule, ignore_stereo, inplace=False):
         if molecule._atoms[c].stereo is None:
             continue
         n, m = molecule._stereo_allenes_terminals[c]
+        # INCHI parity is odd when chython's sign is False. verified against libINCHI's own
+        # perception from 3D coordinates and against the OpenSMILES extended tetrahedron
         stereo.append(([nn, n, m, nm], c, 3, not molecule._translate_allene_sign(c, nn, nm)))
 
     if not stereo:
