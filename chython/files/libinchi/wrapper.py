@@ -103,7 +103,7 @@ def inchi(data, /, *, ignore_stereo: bool = False, _cls=MoleculeContainer) -> Mo
     return mol
 
 
-def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None) -> str:
+def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None, inplace: bool = False) -> str:
     """
     INCHI string writer.
 
@@ -111,6 +111,8 @@ def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None) -> str:
 
     :param ignore_stereo: skip stereo data.
     :param options: libINCHI option names, e.g. ('FixedH', 'RecMet').
+    :param inplace: kekulize the given molecule instead of a copy. Saves the copy on
+        aromatic input and leaves the molecule kekulized.
     """
     if lib is None:
         raise ImportError('libINCHI not found')
@@ -121,7 +123,7 @@ def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None) -> str:
         make, free = lib.GetINCHI, lib.FreeINCHI
         opts = ' '.join(f'{opt_flag}{x}' for x in options).encode()
 
-    atoms, stereo = _inchi_input(molecule, ignore_stereo)
+    atoms, stereo = _inchi_input(molecule, ignore_stereo, inplace)
     inp = InchiInput(atoms, stereo, opts, len(atoms), len(stereo) if stereo is not None else 0)
     out = InchiOutput()
     with _lib_lock:  # libINCHI is not reentrant
@@ -134,11 +136,13 @@ def to_inchi(molecule, /, *, ignore_stereo: bool = False, options=None) -> str:
             free(byref(out))
 
 
-def inchi_key(molecule, /, *, ignore_stereo: bool = False) -> str:
+def inchi_key(molecule, /, *, ignore_stereo: bool = False, inplace: bool = False) -> str:
     """
     Standard INCHIKEY writer.
+
+    :param inplace: kekulize the given molecule instead of a copy. See :func:`to_inchi`.
     """
-    string = to_inchi(molecule, ignore_stereo=ignore_stereo)
+    string = to_inchi(molecule, ignore_stereo=ignore_stereo, inplace=inplace)
     key = create_string_buffer(28)  # 27 chars and zero terminator
     with _lib_lock:
         if rc := lib.GetStdINCHIKeyFromStdINCHI(string.encode(), key):
@@ -146,9 +150,10 @@ def inchi_key(molecule, /, *, ignore_stereo: bool = False) -> str:
     return key.value.decode()
 
 
-def _inchi_input(molecule, ignore_stereo):
+def _inchi_input(molecule, ignore_stereo, inplace=False):
     if any(b == 4 for *_, b in molecule.bonds()):  # inchi_Atom has no aromatic bond type
-        molecule = molecule.copy(keep_sssr=True, keep_components=True)
+        if not inplace:
+            molecule = molecule.copy(keep_sssr=True, keep_components=True)
         molecule.kekule()
         if any(b == 4 for *_, b in molecule.bonds()):
             raise ValueError('kekulization failed')

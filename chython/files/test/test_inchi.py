@@ -116,3 +116,11 @@ def test_inchi_roundtrip():
         if '/i1D3' in string:
             continue  # the parser adds one D atom per isotope layer entry instead of the stated count
         assert to_inchi(inchi(string)) == string
+
+
+@pytest.mark.skipif(not HAS_INCHI, reason='libinchi not available')
+def test_inchi_write_inplace_kekulizes_the_given_molecule():
+    aromatic, kekulized = smiles('c1ccccc1'), smiles('c1ccccc1')
+    assert to_inchi(aromatic) == to_inchi(kekulized, inplace=True)
+    assert all(b == 4 for *_, b in aromatic.bonds())
+    assert not any(b == 4 for *_, b in kekulized.bonds())
